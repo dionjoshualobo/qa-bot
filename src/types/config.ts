@@ -10,7 +10,7 @@ export interface Config {
     path: string;
   };
   bot: {
-    groupId: string;
+    groupId: string | null;
   };
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error';

@@ -103,10 +103,24 @@ LOG_LEVEL=info
 
 ### Finding Your Group ID
 
-1. Start the bot in development mode (see below)
-2. Send a message in your target group
-3. Check the logs for the group ID format: `<country_code><phone_number>-<timestamp>@g.us`
-4. Copy this ID to your `.env` file
+**Easy Method (Recommended):**
+
+1. Run the group ID finder script:
+```bash
+npm run get-group-id
+```
+
+2. Scan the QR code with WhatsApp
+3. The script will list all your groups with their IDs
+4. Copy the desired Group ID to your `.env` file
+
+**Manual Method:**
+
+1. Temporarily set `GROUP_ID=dummy` in `.env`
+2. Start the bot: `npm run dev`
+3. Send a message in your target group
+4. Check the logs for the group ID format: `<country_code><phone_number>-<timestamp>@g.us`
+5. Copy this ID to your `.env` file and restart
 
 ## Usage
 

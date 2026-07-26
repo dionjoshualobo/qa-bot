@@ -33,7 +33,7 @@ export function loadConfig(): Config {
       path: getEnvVar('DATABASE_PATH', './qa-bot.db'),
     },
     bot: {
-      groupId: getEnvVar('GROUP_ID'),
+      groupId: process.env['GROUP_ID'] || null,
     },
     logging: {
       level: getLogLevel(),

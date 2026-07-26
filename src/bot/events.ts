@@ -14,23 +14,22 @@ export function registerEventHandlers(client: Client, config: Config): void {
 
   client.on('message', async (message: Message) => {
     try {
-      const chat = await message.getChat();
+      if (message.fromMe) return;
 
-      // Ignore messages from self
-      if (message.fromMe) {
-        return;
-      }
+      const from: string = message.from;
 
-      // Handle group messages
-      if (chat.isGroup) {
-        // Only handle messages in the configured group
-        if (chat.id._serialized === config.bot.groupId) {
+      // Group messages have @g.us suffix
+      if (from.endsWith('@g.us')) {
+        if (from === config.bot.groupId) {
           await handleGroupMessage(message, config);
         }
         return;
       }
 
-      // Handle private messages
+      // Ignore newsletter messages
+      if (from.endsWith('@newsletter')) return;
+
+      // Everything else is a private message
       await handlePrivateMessage(message, config);
     } catch (error) {
       logger.bot.error('Error in message handler', error);

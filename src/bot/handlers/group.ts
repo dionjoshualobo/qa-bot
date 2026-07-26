@@ -4,18 +4,17 @@
  */
 
 import type { Message } from 'whatsapp-web.js';
-import { getClient } from '../client.js';
 import { resolveMessageMapping } from '../../services/mapping.js';
 import { createNewReply } from '../../services/replies.js';
 import { logger } from '../../utils/logger.js';
 import { MESSAGES } from '../../constants/messages.js';
+import { waSendText, waGetQuotedMessageId, waGetContactName } from '../wa-bridge.js';
 import type { Config } from '../../types/index.js';
 
 export async function handleGroupMessage(
   message: Message,
   _config: Config
 ): Promise<void> {
-  // Only process replies
   if (!message.hasQuotedMsg) {
     logger.bot.debug('Ignoring non-reply message in group');
     return;
@@ -32,15 +31,18 @@ export async function handleGroupMessage(
   logger.bot.info(`Received group reply from ${authorId}`);
 
   try {
-    const quotedMsg = await message.getQuotedMessage();
-    const quotedMsgId = quotedMsg.id._serialized;
+    const quotedMsgId = await waGetQuotedMessageId(message.id._serialized);
 
-    // Resolve what the user is replying to
+    if (!quotedMsgId) {
+      logger.bot.debug('Could not resolve quoted message');
+      return;
+    }
+
     const mappingResult = await resolveMessageMapping(quotedMsgId);
 
     if (!mappingResult.success) {
       logger.bot.error('Failed to resolve mapping', mappingResult.error);
-      await message.reply(MESSAGES.ERROR_GENERIC);
+      await waSendText(message.from, MESSAGES.ERROR_GENERIC);
       return;
     }
 
@@ -53,7 +55,6 @@ export async function handleGroupMessage(
     const question = resolved.question;
     const parentReply = resolved.reply ?? null;
 
-    // Create reply in database
     const replyResult = await createNewReply(
       authorId,
       text,
@@ -64,17 +65,11 @@ export async function handleGroupMessage(
 
     if (!replyResult.success) {
       logger.bot.error('Failed to create reply', replyResult.error);
-      await message.reply(MESSAGES.ERROR_GENERIC);
+      await waSendText(message.from, MESSAGES.ERROR_GENERIC);
       return;
     }
 
-    // Get sender name
-    const contact = await message.getContact();
-    const senderName = contact.pushname || contact.name || 'Anonymous';
-
-    // Forward reply to original question asker
-    const client = getClient();
-    const askerChat = await client.getChatById(question.author_whatsapp_id);
+    const senderName = await waGetContactName(authorId);
 
     const replyMessage = MESSAGES.REPLY_TO_ASKER(
       question.question_id,
@@ -83,13 +78,13 @@ export async function handleGroupMessage(
       text
     );
 
-    await askerChat.sendMessage(replyMessage);
+    await waSendText(question.author_whatsapp_id, replyMessage);
 
     logger.bot.info(
       `Forwarded reply ${replyResult.data.reply_id} to question asker`
     );
   } catch (error) {
     logger.bot.error('Error handling group message', error);
-    await message.reply(MESSAGES.ERROR_GENERIC);
+    await waSendText(message.from, MESSAGES.ERROR_GENERIC);
   }
 }
