@@ -4,6 +4,9 @@
 
 import type { WASocket } from '@whiskeysockets/baileys';
 import { createNewQuestion } from '../../services/questions.js';
+import { createNewReply } from '../../services/replies.js';
+import { resolveMessageMapping } from '../../services/mapping.js';
+import { startSession, endSession } from '../sessions.js';
 import { logger } from '../../utils/logger.js';
 import { MESSAGES } from '../../constants/messages.js';
 import type { Config } from '../../types/index.js';
@@ -15,7 +18,72 @@ export async function handlePrivateMessage(
   config: Config
 ): Promise<void> {
   const authorId = message.key.remoteJid!;
+  const trimmed = text.trim();
 
+  // Handle /help
+  if (/^\/help$/i.test(trimmed)) {
+    await sock.sendMessage(authorId, { text: MESSAGES.HELP });
+    return;
+  }
+
+  // Handle /exit
+  if (/^\/exit$/i.test(trimmed)) {
+    endSession(authorId);
+    await sock.sendMessage(authorId, { text: MESSAGES.SESSION_ENDED });
+    logger.bot.info(`Session ended for ${authorId}`);
+    return;
+  }
+
+  // Check if this is a reply to a forwarded message
+  const contextInfo = message.message?.extendedTextMessage?.contextInfo;
+  const quotedMsgId = contextInfo?.stanzaId;
+
+  if (quotedMsgId) {
+    // This is a reply to something - check if we forwarded it
+    const mappingResult = await resolveMessageMapping(quotedMsgId);
+
+    if (mappingResult.success && mappingResult.data) {
+      const resolved = mappingResult.data;
+      const question = resolved.question;
+      const parentReply = resolved.reply ?? null;
+
+      // Create reply in database
+      const replyResult = await createNewReply(
+        authorId,
+        text,
+        message.key?.id ?? '',
+        question.id,
+        parentReply?.id ?? null
+      );
+
+      if (!replyResult.success) {
+        logger.bot.error('Failed to create reply', replyResult.error);
+        await sock.sendMessage(authorId, { text: MESSAGES.ERROR_GENERIC });
+        return;
+      }
+
+      // Post to group
+      await sock.sendMessage(config.bot.groupId, {
+        text: MESSAGES.REPLY_TEMPLATE(
+          question.question_id,
+          replyResult.data.reply_id,
+          text
+        ),
+      });
+
+      // Confirm to user
+      await sock.sendMessage(authorId, {
+        text: MESSAGES.SUCCESS_REPLY_FORWARDED(replyResult.data.reply_id),
+      });
+
+      logger.bot.info(
+        `Posted reply ${replyResult.data.reply_id} to group from private chat`
+      );
+      return;
+    }
+  }
+
+  // Not a reply to forwarded message - check for /q or /question command
   const match = text.match(/^\/(?:q|question)\s+(.*)/i);
   if (!match || !match[1]) {
     logger.bot.debug('Ignoring non-command message');
@@ -53,6 +121,9 @@ export async function handlePrivateMessage(
         edit: sent.key,
       });
     }
+
+    // Activate session
+    startSession(authorId);
 
     // Confirm to user
     await sock.sendMessage(authorId, {

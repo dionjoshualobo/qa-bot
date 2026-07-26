@@ -22,7 +22,7 @@ function shouldLog(level: LogLevel): boolean {
 }
 
 function formatMessage(prefix: string, message: string): string {
-  const timestamp = new Date().toISOString();
+  const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
   return `[${timestamp}] [${prefix}] ${message}`;
 }
 

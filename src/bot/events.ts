@@ -15,10 +15,6 @@ function extractText(message: any): string {
     || '';
 }
 
-function extractQuotedText(message: any): string {
-  return message?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation || '';
-}
-
 export function registerEventHandlers(sock: WASocket, config: Config): void {
   logger.bot.info('Registering event handlers');
 
@@ -28,7 +24,7 @@ export function registerEventHandlers(sock: WASocket, config: Config): void {
         if (message.key.fromMe) continue;
 
         const from = message.key.remoteJid!;
-        const text = extractText(message) || extractQuotedText(message);
+        const text = extractText(message);
 
         if (!text) continue;
 

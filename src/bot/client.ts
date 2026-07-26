@@ -8,6 +8,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import type { WASocket } from '@whiskeysockets/baileys';
 import pino from 'pino';
+import qrcode from 'qrcode-terminal';
 import { logger } from '../utils/logger.js';
 
 let sock: WASocket | null = null;
@@ -19,7 +20,6 @@ export async function startClient(sessionPath: string): Promise<WASocket> {
 
   sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true,
     logger: pino({ level: 'silent' }),
     browser: ['QA Bot', 'Chrome', '1.0.0'],
   });
@@ -27,7 +27,12 @@ export async function startClient(sessionPath: string): Promise<WASocket> {
   sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect } = update;
+    const { connection, lastDisconnect, qr } = update;
+
+    if (qr) {
+      logger.wa.info('QR Code received. Scan with WhatsApp:');
+      qrcode.generate(qr, { small: true });
+    }
 
     if (connection === 'open') {
       logger.wa.info('WhatsApp client is ready');

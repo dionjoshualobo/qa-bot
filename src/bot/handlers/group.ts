@@ -5,6 +5,8 @@
 import type { WASocket } from '@whiskeysockets/baileys';
 import { resolveMessageMapping } from '../../services/mapping.js';
 import { createNewReply } from '../../services/replies.js';
+import { createMapping } from '../../database/queries/mappings.js';
+import { isSessionActive } from '../sessions.js';
 import { logger } from '../../utils/logger.js';
 import { MESSAGES } from '../../constants/messages.js';
 import type { Config } from '../../types/index.js';
@@ -81,7 +83,22 @@ export async function handleGroupMessage(
       text
     );
 
-    await sock.sendMessage(question.author_whatsapp_id, { text: replyMessage });
+    // Check if asker has active session before forwarding
+    if (!isSessionActive(question.author_whatsapp_id)) {
+      logger.bot.info(`Skipping forward - asker session inactive for ${question.author_whatsapp_id}`);
+      return;
+    }
+
+    const sent = await sock.sendMessage(question.author_whatsapp_id, { text: replyMessage });
+
+    // Store mapping for forwarded message so asker can reply to it
+    if (sent?.key?.id) {
+      createMapping({
+        whatsapp_message_id: sent.key.id,
+        question_id: null,
+        reply_id: replyResult.data.id,
+      });
+    }
 
     logger.bot.info(
       `Forwarded reply ${replyResult.data.reply_id} to question asker`
