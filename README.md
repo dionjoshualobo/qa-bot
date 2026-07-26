@@ -50,6 +50,7 @@ On first run, scan the QR code. The bot will be the account from which the QR co
 | `/help` | Show usage instructions |
 | `/q <question>` or `/question <question>` | Post a question anonymously to the group |
 | `/exit` | Stop receiving replies in DM |
+| `/exit` <text> | Same as /exit, but sends a final message to the group |
 
 ## How It Works
 
