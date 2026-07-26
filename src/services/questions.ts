@@ -7,6 +7,7 @@ import {
   createQuestion,
   getQuestionByGroupMessageId,
   getNextQuestionNumber,
+  deleteUserData as deleteUserDataQuery,
 } from '../database/queries/questions.js';
 import { createMapping } from '../database/queries/mappings.js';
 import { ensureUser } from './users.js';
@@ -75,4 +76,8 @@ export async function createNewQuestion(
 
 export function findQuestionByGroupMessage(groupMessageId: string): Result<Question | null, Error> {
   return getQuestionByGroupMessageId(groupMessageId);
+}
+
+export function deleteUserData(authorWhatsappId: string): Result<void, Error> {
+  return deleteUserDataQuery(authorWhatsappId);
 }

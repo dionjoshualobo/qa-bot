@@ -102,3 +102,49 @@ export function getNextQuestionNumber(): Result<number, Error> {
     return err(error instanceof Error ? error : new Error(String(error)));
   }
 }
+
+export function deleteUserData(authorWhatsappId: string): Result<void, Error> {
+  try {
+    const db = getDatabase();
+    
+    // Get all question IDs for this user
+    const questions = db.prepare(`
+      SELECT id FROM questions WHERE author_whatsapp_id = ?
+    `).all(authorWhatsappId) as { id: number }[];
+    
+    if (questions.length === 0) {
+      return ok(undefined);
+    }
+    
+    const questionIds = questions.map(q => q.id);
+    const placeholders = questionIds.map(() => '?').join(',');
+    
+    // Delete mappings for questions
+    db.prepare(`
+      DELETE FROM message_mappings 
+      WHERE question_id IN (SELECT id FROM questions WHERE author_whatsapp_id = ?)
+    `).run(authorWhatsappId);
+    
+    // Delete mappings for replies to these questions
+    db.prepare(`
+      DELETE FROM message_mappings 
+      WHERE reply_id IN (SELECT id FROM replies WHERE question_id IN (${placeholders}))
+    `).run(...questionIds);
+    
+    // Delete replies to these questions
+    db.prepare(`
+      DELETE FROM replies WHERE question_id IN (${placeholders})
+    `).run(...questionIds);
+    
+    // Delete questions
+    db.prepare(`
+      DELETE FROM questions WHERE author_whatsapp_id = ?
+    `).run(authorWhatsappId);
+    
+    logger.db.debug(`Deleted data for user: ${authorWhatsappId}`);
+    return ok(undefined);
+  } catch (error) {
+    logger.db.error('Failed to delete user data', error);
+    return err(error instanceof Error ? error : new Error(String(error)));
+  }
+}

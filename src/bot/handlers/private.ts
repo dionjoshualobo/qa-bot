@@ -4,7 +4,7 @@
 
 import type { WASocket } from '@whiskeysockets/baileys';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
-import { createNewQuestion, generateQuestionId } from '../../services/questions.js';
+import { createNewQuestion, generateQuestionId, deleteUserData } from '../../services/questions.js';
 import { createNewReply } from '../../services/replies.js';
 import { resolveMessageMapping } from '../../services/mapping.js';
 import { createMapping } from '../../database/queries/mappings.js';
@@ -52,8 +52,9 @@ export async function handlePrivateMessage(
   // Handle /exit
   if (/^\/exit$/i.test(trimmed)) {
     endSession(authorId);
+    deleteUserData(authorId);
     await sock.sendMessage(authorId, { text: MESSAGES.SESSION_ENDED });
-    logger.bot.info(`Session ended for ${authorId}`);
+    logger.bot.info(`Session ended and data cleaned for ${authorId}`);
     return;
   }
 
