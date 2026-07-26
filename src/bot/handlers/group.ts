@@ -3,6 +3,7 @@
  */
 
 import type { WASocket } from '@whiskeysockets/baileys';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { resolveMessageMapping } from '../../services/mapping.js';
 import { createNewReply } from '../../services/replies.js';
 import { createMapping } from '../../database/queries/mappings.js';
@@ -10,6 +11,17 @@ import { isSessionActive } from '../sessions.js';
 import { logger } from '../../utils/logger.js';
 import { MESSAGES } from '../../constants/messages.js';
 import type { Config } from '../../types/index.js';
+
+function extractText(message: any): string {
+  return message?.message?.conversation
+    || message?.message?.extendedTextMessage?.text
+    || message?.message?.imageMessage?.caption
+    || '';
+}
+
+function hasImage(message: any): boolean {
+  return !!message?.message?.imageMessage;
+}
 
 export async function handleGroupMessage(
   sock: WASocket,
@@ -22,9 +34,7 @@ export async function handleGroupMessage(
     return;
   }
 
-  const text = message.message?.conversation
-    || message.message?.extendedTextMessage?.text
-    || '';
+  const text = extractText(message);
 
   if (!text) {
     logger.bot.debug('Ignoring empty reply');
@@ -90,7 +100,17 @@ export async function handleGroupMessage(
       return;
     }
 
-    const sent = await sock.sendMessage(question.author_whatsapp_id, { text: replyMessage });
+    // Forward to asker (with image if present)
+    let sent;
+    if (hasImage(message)) {
+      const buffer = await downloadMediaMessage(message, 'buffer', {});
+      sent = await sock.sendMessage(question.author_whatsapp_id, {
+        image: buffer,
+        caption: replyMessage,
+      });
+    } else {
+      sent = await sock.sendMessage(question.author_whatsapp_id, { text: replyMessage });
+    }
 
     // Store mapping for forwarded message so asker can reply to it
     if (sent?.key?.id) {

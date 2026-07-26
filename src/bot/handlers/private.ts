@@ -3,6 +3,7 @@
  */
 
 import type { WASocket } from '@whiskeysockets/baileys';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { createNewQuestion, generateQuestionId } from '../../services/questions.js';
 import { createNewReply } from '../../services/replies.js';
 import { resolveMessageMapping } from '../../services/mapping.js';
@@ -12,6 +13,26 @@ import { startSession, endSession } from '../sessions.js';
 import { logger } from '../../utils/logger.js';
 import { MESSAGES } from '../../constants/messages.js';
 import type { Config } from '../../types/index.js';
+
+function hasImage(message: any): boolean {
+  return !!message?.message?.imageMessage;
+}
+
+async function sendToGroup(
+  sock: WASocket,
+  groupId: string,
+  text: string,
+  message: any
+): Promise<any> {
+  if (hasImage(message)) {
+    const buffer = await downloadMediaMessage(message, 'buffer', {});
+    return sock.sendMessage(groupId, {
+      image: buffer,
+      caption: text,
+    });
+  }
+  return sock.sendMessage(groupId, { text });
+}
 
 export async function handlePrivateMessage(
   sock: WASocket,
@@ -64,14 +85,17 @@ export async function handlePrivateMessage(
         return;
       }
 
-      // Post to group
-      const sentToGroup = await sock.sendMessage(config.bot.groupId, {
-        text: MESSAGES.REPLY_TEMPLATE(
+      // Post to group (with image if present)
+      const sentToGroup = await sendToGroup(
+        sock,
+        config.bot.groupId,
+        MESSAGES.REPLY_TEMPLATE(
           question.question_id,
           replyResult.data.reply_id,
           text
         ),
-      });
+        message
+      );
 
       // Store mapping for group message so others can reply to it
       if (sentToGroup?.key?.id) {
@@ -122,8 +146,13 @@ export async function handlePrivateMessage(
 
     const questionId = generateQuestionId(nextNumResult.data);
 
-    // Post question to group with actual ID
-    const sent = await sock.sendMessage(groupId, { text: MESSAGES.QUESTION_TEMPLATE(questionId, questionText) });
+    // Post question to group with actual ID (with image if present)
+    const sent = await sendToGroup(
+      sock,
+      groupId,
+      MESSAGES.QUESTION_TEMPLATE(questionId, questionText),
+      message
+    );
     const groupMsgId = sent?.key?.id ?? '';
 
     // Create question in database
