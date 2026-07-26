@@ -3,51 +3,64 @@
  * Run this before configuring the bot to find your group ID
  */
 
-import wwebjs from 'whatsapp-web.js';
+import { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode-terminal';
-
-const { Client, LocalAuth } = wwebjs;
+import pino from 'pino';
 
 console.log('WhatsApp Group ID Finder');
 console.log('========================\n');
 
-const client = new Client({
-  authStrategy: new LocalAuth({
-    dataPath: './.wwebjs_auth',
-  }),
-  puppeteer: {
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  },
+const { state, saveCreds } = await useMultiFileAuthState('./.baileys_auth');
+const { version } = await fetchLatestBaileysVersion();
+
+const sock = makeWASocket({
+  version,
+  auth: state,
+  printQRInTerminal: false,
+  logger: pino({ level: 'silent' }),
 });
 
-client.on('qr', (qr) => {
-  console.log('Scan this QR code with WhatsApp:\n');
-  qrcode.generate(qr, { small: true });
+sock.ev.on('connection.update', (update) => {
+  const { connection, lastDisconnect, qr } = update;
+
+  if (qr) {
+    console.log('Scan this QR code with WhatsApp:\n');
+    qrcode.generate(qr, { small: true });
+  }
+
+  if (connection === 'close') {
+    const reason = lastDisconnect?.error?.output?.statusCode;
+    if (reason === DisconnectReason.loggedOut) {
+      console.log('\nLogged out. Delete .baileys_auth and try again.');
+      process.exit(1);
+    } else {
+      console.log('\nConnection closed. Reconnecting...');
+    }
+  }
+
+  if (connection === 'open') {
+    console.log('\n✓ Connected successfully\n');
+    listGroups();
+  }
 });
 
-client.on('authenticated', () => {
-  console.log('\n✓ Authenticated successfully\n');
-});
+sock.ev.on('creds.update', saveCreds);
 
-client.on('ready', async () => {
-  console.log('✓ Client is ready\n');
-  console.log('Fetching your groups...\n');
-
+async function listGroups() {
   try {
-    const chats = await client.getChats();
-    const groups = chats.filter((chat) => chat.isGroup);
+    const groups = await sock.groupFetchAllParticipating();
+    const groupList = Object.values(groups);
 
-    if (groups.length === 0) {
+    if (groupList.length === 0) {
       console.log('No groups found. Make sure you are a member of at least one group.\n');
     } else {
-      console.log(`Found ${groups.length} group(s):\n`);
-      console.log('─'.repeat(80));
+      console.log(`Found ${groupList.length} group(s):\n`);
+      console.log('─'.repeat(60));
 
-      for (const group of groups) {
-        console.log(`\nGroup Name: ${group.name}`);
-        console.log(`Group ID:   ${group.id._serialized}`);
-        console.log('─'.repeat(80));
+      for (const group of groupList) {
+        console.log(`\nGroup Name: ${group.subject}`);
+        console.log(`Group ID:   ${group.id}`);
+        console.log('─'.repeat(60));
       }
 
       console.log('\nCopy the Group ID of your target group and paste it into your .env file:');
@@ -58,11 +71,4 @@ client.on('ready', async () => {
   }
 
   console.log('Press Ctrl+C to exit...');
-});
-
-client.on('auth_failure', (error) => {
-  console.error('Authentication failed:', error);
-  process.exit(1);
-});
-
-client.initialize();
+}
