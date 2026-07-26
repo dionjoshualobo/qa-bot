@@ -3,9 +3,11 @@
  */
 
 import type { WASocket } from '@whiskeysockets/baileys';
-import { createNewQuestion } from '../../services/questions.js';
+import { createNewQuestion, generateQuestionId } from '../../services/questions.js';
 import { createNewReply } from '../../services/replies.js';
 import { resolveMessageMapping } from '../../services/mapping.js';
+import { createMapping } from '../../database/queries/mappings.js';
+import { getNextQuestionNumber } from '../../database/queries/questions.js';
 import { startSession, endSession } from '../sessions.js';
 import { logger } from '../../utils/logger.js';
 import { MESSAGES } from '../../constants/messages.js';
@@ -63,13 +65,22 @@ export async function handlePrivateMessage(
       }
 
       // Post to group
-      await sock.sendMessage(config.bot.groupId, {
+      const sentToGroup = await sock.sendMessage(config.bot.groupId, {
         text: MESSAGES.REPLY_TEMPLATE(
           question.question_id,
           replyResult.data.reply_id,
           text
         ),
       });
+
+      // Store mapping for group message so others can reply to it
+      if (sentToGroup?.key?.id) {
+        createMapping({
+          whatsapp_message_id: sentToGroup.key.id,
+          question_id: null,
+          reply_id: replyResult.data.id,
+        });
+      }
 
       // Confirm to user
       await sock.sendMessage(authorId, {
@@ -84,7 +95,7 @@ export async function handlePrivateMessage(
   }
 
   // Not a reply to forwarded message - check for /q or /question command
-  const match = text.match(/^\/(?:q|question)\s+(.*)/i);
+  const match = text.match(/^\/(?:q|question)\s+(.*)/is);
   if (!match || !match[1]) {
     logger.bot.debug('Ignoring non-command message');
     return;
@@ -101,12 +112,22 @@ export async function handlePrivateMessage(
   try {
     const groupId = config.bot.groupId;
 
-    // Post question to group
-    const sent = await sock.sendMessage(groupId, { text: MESSAGES.QUESTION_TEMPLATE('...', questionText) });
+    // Generate question ID first
+    const nextNumResult = getNextQuestionNumber();
+    if (!nextNumResult.success) {
+      logger.bot.error('Failed to get next question number', nextNumResult.error);
+      await sock.sendMessage(authorId, { text: MESSAGES.ERROR_GENERIC });
+      return;
+    }
+
+    const questionId = generateQuestionId(nextNumResult.data);
+
+    // Post question to group with actual ID
+    const sent = await sock.sendMessage(groupId, { text: MESSAGES.QUESTION_TEMPLATE(questionId, questionText) });
     const groupMsgId = sent?.key?.id ?? '';
 
     // Create question in database
-    const questionResult = await createNewQuestion(authorId, questionText, groupMsgId);
+    const questionResult = await createNewQuestion(authorId, questionText, groupMsgId, questionId);
 
     if (!questionResult.success) {
       logger.bot.error('Failed to create question', questionResult.error);
@@ -114,23 +135,15 @@ export async function handlePrivateMessage(
       return;
     }
 
-    // Update the group message with the actual question ID
-    if (sent?.key) {
-      await sock.sendMessage(groupId, {
-        text: MESSAGES.QUESTION_TEMPLATE(questionResult.data.question_id, questionText),
-        edit: sent.key,
-      });
-    }
-
     // Activate session
     startSession(authorId);
 
     // Confirm to user
     await sock.sendMessage(authorId, {
-      text: MESSAGES.SUCCESS_QUESTION_POSTED(questionResult.data.question_id),
+      text: MESSAGES.SUCCESS_QUESTION_POSTED(questionId),
     });
 
-    logger.bot.info(`Posted question ${questionResult.data.question_id} to group`);
+    logger.bot.info(`Posted question ${questionId} to group`);
   } catch (error) {
     logger.bot.error('Error handling private message', error);
     await sock.sendMessage(message.key.remoteJid!, { text: MESSAGES.ERROR_GENERIC });

@@ -45,6 +45,7 @@ export async function startClient(sessionPath: string): Promise<WASocket> {
 
       if (reason !== DisconnectReason.loggedOut) {
         logger.wa.info('Reconnecting...');
+        connectionPromise = new Promise((resolve) => { connectionResolve = resolve; });
         startClient(sessionPath);
       } else {
         logger.wa.error('Logged out. Delete session and re-scan QR.');

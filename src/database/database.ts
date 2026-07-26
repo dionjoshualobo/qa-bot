@@ -19,6 +19,9 @@ export function initDatabase(dbPath: string): Result<Database.Database, Error> {
     // Enable foreign keys
     db.pragma('foreign_keys = ON');
     
+    // Enable WAL mode for better concurrent performance
+    db.pragma('journal_mode = WAL');
+    
     // Create tables
     db.exec(SCHEMA.users);
     db.exec(SCHEMA.questions);

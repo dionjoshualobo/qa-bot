@@ -34,9 +34,10 @@ export async function handleGroupMessage(
   const authorId = message.key?.participant || message.key?.remoteJid;
   const quotedMsgId = contextInfo.stanzaId;
   const remoteJid = message.key?.remoteJid;
+  const msgId = message.key?.id;
 
-  if (!authorId || !remoteJid) {
-    logger.bot.debug('Missing sender or group info');
+  if (!authorId || !remoteJid || !msgId) {
+    logger.bot.debug('Missing sender, group info, or message ID');
     return;
   }
 
@@ -63,7 +64,7 @@ export async function handleGroupMessage(
     const replyResult = await createNewReply(
       authorId,
       text,
-      message.key?.id ?? '',
+      msgId,
       question.id,
       parentReply?.id ?? null
     );

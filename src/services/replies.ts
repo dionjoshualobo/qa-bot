@@ -7,6 +7,7 @@ import {
   createReply,
   getReplyByGroupMessageId,
   getNextReplyNumber,
+  getReplyById,
 } from '../database/queries/replies.js';
 import { getQuestionById } from '../database/queries/questions.js';
 import { createMapping } from '../database/queries/mappings.js';
@@ -54,9 +55,7 @@ export async function createNewReply(
   // Get parent reply if exists
   let parentReply: Reply | null = null;
   if (parentReplyId !== null) {
-    const parentReplyResult = await import('../database/queries/replies.js').then(m =>
-      m.getReplyById(parentReplyId)
-    );
+    const parentReplyResult = getReplyById(parentReplyId);
     if (!parentReplyResult.success) {
       return parentReplyResult;
     }

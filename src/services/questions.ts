@@ -22,7 +22,8 @@ export function generateQuestionId(questionNumber: number): string {
 export async function createNewQuestion(
   authorWhatsappId: string,
   text: string,
-  groupMessageId: string
+  groupMessageId: string,
+  preGeneratedQuestionId?: string
 ): Promise<Result<Question, Error>> {
   logger.question.info(`Creating new question from ${authorWhatsappId}`);
 
@@ -32,13 +33,17 @@ export async function createNewQuestion(
     return userResult;
   }
 
-  // Get next question number
-  const questionNumberResult = getNextQuestionNumber();
-  if (!questionNumberResult.success) {
-    return questionNumberResult;
+  // Use pre-generated ID or generate new one
+  let questionId: string;
+  if (preGeneratedQuestionId) {
+    questionId = preGeneratedQuestionId;
+  } else {
+    const questionNumberResult = getNextQuestionNumber();
+    if (!questionNumberResult.success) {
+      return questionNumberResult;
+    }
+    questionId = generateQuestionId(questionNumberResult.data);
   }
-
-  const questionId = generateQuestionId(questionNumberResult.data);
 
   // Create question
   const questionResult = createQuestion({

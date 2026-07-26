@@ -12,6 +12,7 @@ import type { Config } from '../types/index.js';
 function extractText(message: any): string {
   return message?.message?.conversation
     || message?.message?.extendedTextMessage?.text
+    || message?.message?.imageMessage?.caption
     || '';
 }
 
