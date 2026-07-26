@@ -9,6 +9,7 @@ dist/
 # WhatsApp session data
 .wwebjs_auth/
 .wwebjs_cache/
+.baileys_auth/
 _IGNORE_session/
 *.data.json
 *.node-persist*

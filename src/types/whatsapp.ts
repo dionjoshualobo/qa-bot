@@ -2,8 +2,6 @@
  * WhatsApp-related types
  */
 
-import type { Message, Chat } from 'whatsapp-web.js';
-
 export interface WhatsAppMessage {
   id: string;
   body: string;
@@ -11,7 +9,9 @@ export interface WhatsAppMessage {
   to: string;
   timestamp: number;
   hasQuotedMsg: boolean;
-  isGroup: boolean;
+  quotedMsg?: QuotedMessage;
+  author?: string;
+  fromMe: boolean;
 }
 
 export interface QuotedMessage {
@@ -19,5 +19,3 @@ export interface QuotedMessage {
   body: string;
   from: string;
 }
-
-export type { Message, Chat };

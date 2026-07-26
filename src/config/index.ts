@@ -27,13 +27,13 @@ function getLogLevel(): 'debug' | 'info' | 'warn' | 'error' {
 export function loadConfig(): Config {
   return {
     whatsapp: {
-      sessionPath: getEnvVar('SESSION_PATH', './.wwebjs_auth'),
+      sessionPath: getEnvVar('SESSION_PATH', './.baileys_auth'),
     },
     database: {
       path: getEnvVar('DATABASE_PATH', './qa-bot.db'),
     },
     bot: {
-      groupId: process.env['GROUP_ID'] || null,
+      groupId: getEnvVar('GROUP_ID'),
     },
     logging: {
       level: getLogLevel(),

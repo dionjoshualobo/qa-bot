@@ -1,48 +1,51 @@
 /**
  * Group chat message handler
- * Handles replies to questions in the group
  */
 
-import type { Message } from 'whatsapp-web.js';
+import type { WASocket } from '@whiskeysockets/baileys';
 import { resolveMessageMapping } from '../../services/mapping.js';
 import { createNewReply } from '../../services/replies.js';
 import { logger } from '../../utils/logger.js';
 import { MESSAGES } from '../../constants/messages.js';
-import { waSendText, waGetQuotedMessageId, waGetContactName } from '../wa-bridge.js';
 import type { Config } from '../../types/index.js';
 
 export async function handleGroupMessage(
-  message: Message,
+  sock: WASocket,
+  message: any,
   _config: Config
 ): Promise<void> {
-  if (!message.hasQuotedMsg) {
+  const contextInfo = message.message?.extendedTextMessage?.contextInfo;
+  if (!contextInfo?.stanzaId) {
     logger.bot.debug('Ignoring non-reply message in group');
     return;
   }
 
-  const text = message.body.trim();
-  const authorId = message.author ?? message.from;
+  const text = message.message?.conversation
+    || message.message?.extendedTextMessage?.text
+    || '';
 
   if (!text) {
     logger.bot.debug('Ignoring empty reply');
     return;
   }
 
+  const authorId = message.key?.participant || message.key?.remoteJid;
+  const quotedMsgId = contextInfo.stanzaId;
+  const remoteJid = message.key?.remoteJid;
+
+  if (!authorId || !remoteJid) {
+    logger.bot.debug('Missing sender or group info');
+    return;
+  }
+
   logger.bot.info(`Received group reply from ${authorId}`);
 
   try {
-    const quotedMsgId = await waGetQuotedMessageId(message.id._serialized);
-
-    if (!quotedMsgId) {
-      logger.bot.debug('Could not resolve quoted message');
-      return;
-    }
-
     const mappingResult = await resolveMessageMapping(quotedMsgId);
 
     if (!mappingResult.success) {
       logger.bot.error('Failed to resolve mapping', mappingResult.error);
-      await waSendText(message.from, MESSAGES.ERROR_GENERIC);
+      await sock.sendMessage(remoteJid, { text: MESSAGES.ERROR_GENERIC });
       return;
     }
 
@@ -58,18 +61,18 @@ export async function handleGroupMessage(
     const replyResult = await createNewReply(
       authorId,
       text,
-      message.id._serialized,
+      message.key?.id ?? '',
       question.id,
       parentReply?.id ?? null
     );
 
     if (!replyResult.success) {
       logger.bot.error('Failed to create reply', replyResult.error);
-      await waSendText(message.from, MESSAGES.ERROR_GENERIC);
+      await sock.sendMessage(remoteJid, { text: MESSAGES.ERROR_GENERIC });
       return;
     }
 
-    const senderName = await waGetContactName(authorId);
+    const senderName = message.pushName || 'Anonymous';
 
     const replyMessage = MESSAGES.REPLY_TO_ASKER(
       question.question_id,
@@ -78,13 +81,16 @@ export async function handleGroupMessage(
       text
     );
 
-    await waSendText(question.author_whatsapp_id, replyMessage);
+    await sock.sendMessage(question.author_whatsapp_id, { text: replyMessage });
 
     logger.bot.info(
       `Forwarded reply ${replyResult.data.reply_id} to question asker`
     );
   } catch (error) {
     logger.bot.error('Error handling group message', error);
-    await waSendText(message.from, MESSAGES.ERROR_GENERIC);
+    const remoteJid = message.key?.remoteJid;
+    if (remoteJid) {
+      await sock.sendMessage(remoteJid, { text: MESSAGES.ERROR_GENERIC });
+    }
   }
 }

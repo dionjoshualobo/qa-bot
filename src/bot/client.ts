@@ -1,86 +1,72 @@
 /**
- * WhatsApp client wrapper
- * Handles client initialization and authentication
+ * WhatsApp client wrapper using Baileys
  */
 
-import wwebjs from 'whatsapp-web.js';
-import qrcode from 'qrcode-terminal';
-
-const { Client, LocalAuth } = wwebjs;
-type WAClient = InstanceType<typeof Client>;
-import type { Config } from '../types/index.js';
+import makeWASocket, {
+  useMultiFileAuthState,
+  DisconnectReason,
+} from '@whiskeysockets/baileys';
+import type { WASocket } from '@whiskeysockets/baileys';
+import pino from 'pino';
 import { logger } from '../utils/logger.js';
 
-let client: WAClient | null = null;
-let clientReady = false;
-let readyResolve: (() => void) | null = null;
+let sock: WASocket | null = null;
+let connectionPromise: Promise<void> | null = null;
+let connectionResolve: (() => void) | null = null;
 
-export function createClient(config: Config): WAClient {
-  logger.wa.info('Creating WhatsApp client');
-  clientReady = false;
+export async function startClient(sessionPath: string): Promise<WASocket> {
+  const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
 
-  const waClient = new Client({
-    authStrategy: new LocalAuth({
-      dataPath: config.whatsapp.sessionPath,
-    }),
-    puppeteer: {
-      headless: false,
-      executablePath: '/usr/bin/chromium',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    },
+  sock = makeWASocket({
+    auth: state,
+    printQRInTerminal: true,
+    logger: pino({ level: 'silent' }),
+    browser: ['QA Bot', 'Chrome', '1.0.0'],
   });
 
-  waClient.on('qr', (qr) => {
-    logger.wa.info('QR Code received. Scan with WhatsApp:');
-    qrcode.generate(qr, { small: true });
+  sock.ev.on('creds.update', saveCreds);
+
+  sock.ev.on('connection.update', (update) => {
+    const { connection, lastDisconnect } = update;
+
+    if (connection === 'open') {
+      logger.wa.info('WhatsApp client is ready');
+      connectionResolve?.();
+    }
+
+    if (connection === 'close') {
+      const reason = (lastDisconnect?.error as any)?.output?.statusCode;
+      logger.wa.warn(`Connection closed, reason: ${reason}`);
+
+      if (reason !== DisconnectReason.loggedOut) {
+        logger.wa.info('Reconnecting...');
+        startClient(sessionPath);
+      } else {
+        logger.wa.error('Logged out. Delete session and re-scan QR.');
+        process.exit(1);
+      }
+    }
   });
 
-  waClient.on('authenticated', () => {
-    logger.wa.info('Client authenticated successfully');
+  connectionPromise = new Promise((resolve) => {
+    connectionResolve = resolve;
   });
 
-  waClient.on('auth_failure', (error) => {
-    logger.wa.error('Authentication failed', error);
-  });
-
-  waClient.on('ready', () => {
-    logger.wa.info('WhatsApp client is ready');
-    clientReady = true;
-    readyResolve?.();
-  });
-
-  waClient.on('disconnected', (reason) => {
-    logger.wa.warn('Client disconnected', reason);
-  });
-
-  client = waClient;
-  return waClient;
+  return sock;
 }
 
-export function getClient(): WAClient {
-  if (!client) {
-    throw new Error('WhatsApp client not initialized. Call createClient first.');
-  }
-  return client;
-}
-
-export async function initializeClient(config: Config): Promise<void> {
-  const waClient = createClient(config);
-  logger.wa.info('Initializing WhatsApp client...');
-  await waClient.initialize();
+export function getSock(): WASocket {
+  if (!sock) throw new Error('WhatsApp client not initialized');
+  return sock;
 }
 
 export function waitForReady(): Promise<void> {
-  if (clientReady) return Promise.resolve();
-  return new Promise((resolve) => {
-    readyResolve = resolve;
-  });
+  return connectionPromise ?? Promise.reject('Client not started');
 }
 
 export async function destroyClient(): Promise<void> {
-  if (client) {
-    logger.wa.info('Destroying WhatsApp client');
-    await client.destroy();
-    client = null;
+  if (sock) {
+    sock.end(undefined);
+    sock = null;
   }
 }
