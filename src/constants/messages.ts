@@ -63,6 +63,8 @@ ${text}
   SESSION_ENDED: `Session ended. You will no longer receive replies in this DM.
 
 To start a new session, send a new question with /q or /question.`,
+
+  SESSION_ACTIVE: `You already have an active session. Use /exit to close it before starting a new one.`,
 };
 
 export const QUESTION_ID_PREFIX = 'Q';

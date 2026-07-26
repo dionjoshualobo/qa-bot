@@ -9,7 +9,7 @@ import { createNewReply } from '../../services/replies.js';
 import { resolveMessageMapping } from '../../services/mapping.js';
 import { createMapping } from '../../database/queries/mappings.js';
 import { getNextQuestionNumber } from '../../database/queries/questions.js';
-import { startSession, endSession } from '../sessions.js';
+import { startSession, endSession, isSessionActive } from '../sessions.js';
 import { logger } from '../../utils/logger.js';
 import { MESSAGES } from '../../constants/messages.js';
 import type { Config } from '../../types/index.js';
@@ -123,6 +123,12 @@ export async function handlePrivateMessage(
   const match = text.match(/^\/(?:q|question)\s+(.*)/is);
   if (!match || !match[1]) {
     logger.bot.debug('Ignoring non-command message');
+    return;
+  }
+
+  // Check if user already has active session
+  if (isSessionActive(authorId)) {
+    await sock.sendMessage(authorId, { text: MESSAGES.SESSION_ACTIVE });
     return;
   }
 
