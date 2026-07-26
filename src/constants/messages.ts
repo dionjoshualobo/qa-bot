@@ -65,6 +65,12 @@ ${text}
 To start a new session, send a new question with /q or /question.`,
 
   SESSION_ACTIVE: `You already have an active session. Use /exit to close it before starting a new one.`,
+
+  EXIT_MESSAGE: (text: string) => `━━━━━━━━━━━━━━━━━━
+
+👋 ${text}
+
+━━━━━━━━━━━━━━━━━━━`,
 };
 
 export const QUESTION_ID_PREFIX = 'Q';

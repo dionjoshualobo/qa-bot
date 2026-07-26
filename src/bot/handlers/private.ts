@@ -49,8 +49,18 @@ export async function handlePrivateMessage(
     return;
   }
 
-  // Handle /exit
-  if (/^\/exit$/i.test(trimmed)) {
+  // Handle /exit with optional message
+  const exitMatch = trimmed.match(/^\/exit\s*(.*)/is);
+  if (exitMatch) {
+    const exitMessage = exitMatch[1]?.trim();
+    
+    // Post exit message to group if provided
+    if (exitMessage) {
+      await sock.sendMessage(config.bot.groupId, {
+        text: MESSAGES.EXIT_MESSAGE(exitMessage),
+      });
+    }
+    
     endSession(authorId);
     deleteUserData(authorId);
     await sock.sendMessage(authorId, { text: MESSAGES.SESSION_ENDED });
