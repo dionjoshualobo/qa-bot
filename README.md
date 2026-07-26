@@ -41,7 +41,7 @@ LOG_LEVEL=info
 npm run dev
 ```
 
-On first run, scan the QR code. After that, session persists in `.baileys_auth/`.
+On first run, scan the QR code. The bot will be the account from which the QR code was scanned. After that, session persists in `.baileys_auth/`.
 
 ## Commands
 
