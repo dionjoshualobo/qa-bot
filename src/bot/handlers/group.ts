@@ -110,6 +110,8 @@ export async function handleGroupMessage(
       });
     } else {
       sent = await sock.sendMessage(question.author_whatsapp_id, { text: replyMessage });
+      // Also send a reply in the group referencing the original message
+      await sock.sendMessage(remoteJid, { text: replyMessage, quoted: message });
     }
 
     // Store mapping for forwarded message so asker can reply to it
