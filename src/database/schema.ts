@@ -23,6 +23,13 @@ export const SCHEMA = {
     )
   `,
 
+  question_counters: `
+    CREATE TABLE IF NOT EXISTS question_counters (
+      name TEXT PRIMARY KEY,
+      value INTEGER NOT NULL DEFAULT 0
+    )
+  `,
+
   replies: `
     CREATE TABLE IF NOT EXISTS replies (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,4 +75,16 @@ export const SCHEMA = {
     'CREATE INDEX IF NOT EXISTS idx_mappings_question ON message_mappings(question_id)',
     'CREATE INDEX IF NOT EXISTS idx_mappings_reply ON message_mappings(reply_id)',
   ],
+
+  seed_question_counter: `
+    INSERT OR IGNORE INTO question_counters (name, value)
+    SELECT 'questions', COALESCE(MAX(value), 0)
+    FROM (
+      SELECT COALESCE((SELECT seq FROM sqlite_sequence WHERE name = 'questions'), 0) AS value
+      UNION ALL
+      SELECT COALESCE(MAX(CAST(SUBSTR(question_id, 2) AS INTEGER)), 0) AS value
+      FROM questions
+      WHERE question_id GLOB 'Q[0-9]*'
+    )
+  `,
 };

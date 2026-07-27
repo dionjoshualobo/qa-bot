@@ -90,13 +90,37 @@ export function getQuestionByGroupMessageId(groupMessageId: string): Result<Ques
 export function getNextQuestionNumber(): Result<number, Error> {
   try {
     const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT COUNT(*) as count FROM questions
-    `);
-    
-    const result = stmt.get() as { count: number } | undefined;
-    
-    return ok((result?.count ?? 0) + 1);
+    const nextQuestionNumber = db.transaction(() => {
+      db.prepare(`
+        INSERT OR IGNORE INTO question_counters (name, value)
+        SELECT 'questions', COALESCE(MAX(value), 0)
+        FROM (
+          SELECT COALESCE((SELECT seq FROM sqlite_sequence WHERE name = 'questions'), 0) AS value
+          UNION ALL
+          SELECT COALESCE(MAX(CAST(SUBSTR(question_id, 2) AS INTEGER)), 0) AS value
+          FROM questions
+          WHERE question_id GLOB 'Q[0-9]*'
+        )
+      `).run();
+
+      db.prepare(`
+        UPDATE question_counters
+        SET value = value + 1
+        WHERE name = 'questions'
+      `).run();
+
+      const result = db.prepare(`
+        SELECT value FROM question_counters WHERE name = 'questions'
+      `).get() as { value: number } | undefined;
+
+      if (!result) {
+        throw new Error('Question counter not initialized');
+      }
+
+      return result.value;
+    })();
+
+    return ok(nextQuestionNumber);
   } catch (error) {
     logger.db.error('Failed to get next question number', error);
     return err(error instanceof Error ? error : new Error(String(error)));

@@ -25,6 +25,8 @@ export function initDatabase(dbPath: string): Result<Database.Database, Error> {
     // Create tables
     db.exec(SCHEMA.users);
     db.exec(SCHEMA.questions);
+    db.exec(SCHEMA.question_counters);
+    db.exec(SCHEMA.seed_question_counter);
     db.exec(SCHEMA.replies);
     db.exec(SCHEMA.message_mappings);
     
