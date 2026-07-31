@@ -26,13 +26,13 @@ async function sendToGroup(
   targetGroupMsgId?: string,
   targetParticipant?: string
 ): Promise<any> {
-  let quoted;
+  const options: any = {};
   if (targetGroupMsgId) {
-    quoted = {
+    options.quoted = {
       key: {
         remoteJid: groupId,
         id: targetGroupMsgId,
-        ...(targetParticipant ? { participant: targetParticipant } : {})
+        participant: targetParticipant
       },
       message: { conversation: '' }
     };
@@ -43,9 +43,9 @@ async function sendToGroup(
     return sock.sendMessage(groupId, {
       image: buffer,
       caption: text,
-    }, { quoted });
+    }, options);
   }
-  return sock.sendMessage(groupId, { text }, { quoted });
+  return sock.sendMessage(groupId, { text }, options);
 }
 
 export async function handlePrivateMessage(
