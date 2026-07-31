@@ -28,13 +28,22 @@ export async function handleGroupMessage(
   message: any,
   _config: Config
 ): Promise<void> {
+  const text = extractText(message);
+  
+  // Handle /repo
+  if (/^\/repo$/i.test(text.trim())) {
+    const remoteJid = message.key?.remoteJid;
+    if (remoteJid) {
+      await sock.sendMessage(remoteJid, { text: MESSAGES.REPO });
+    }
+    return;
+  }
+
   const contextInfo = message.message?.extendedTextMessage?.contextInfo;
   if (!contextInfo?.stanzaId) {
     logger.bot.debug('Ignoring non-reply message in group');
     return;
   }
-
-  const text = extractText(message);
 
   if (!text) {
     logger.bot.debug('Ignoring empty reply');

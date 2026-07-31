@@ -63,6 +63,12 @@ export async function handlePrivateMessage(
     return;
   }
 
+  // Handle /repo
+  if (/^\/repo$/i.test(trimmed)) {
+    await sock.sendMessage(authorId, { text: MESSAGES.REPO });
+    return;
+  }
+
   // Handle /exit with optional message
   const exitMatch = trimmed.match(/^\/exit\s*(.*)/is);
   if (exitMatch) {

@@ -58,6 +58,8 @@ ${text}
 
 • If you plan to reply in the group directly, use /exit first to avoid confusion.
 
+• Use /repo to get the source code repository link for this bot.
+
 ━━━━━━━━━━━━━━━━━━━`,
 
   SESSION_ENDED: `Session ended. You will no longer receive replies in this DM.
@@ -71,6 +73,8 @@ To start a new session, send a new question with /q or /question.`,
 👋 ${text}
 
 ━━━━━━━━━━━━━━━━━━━`,
+
+  REPO: `You can find the source code for this bot here:\nhttps://github.com/dionjoshualobo/qa-bot/`,
 };
 
 export const QUESTION_ID_PREFIX = 'Q';
