@@ -22,16 +22,30 @@ async function sendToGroup(
   sock: WASocket,
   groupId: string,
   text: string,
-  message: any
+  message: any,
+  targetGroupMsgId?: string,
+  targetParticipant?: string
 ): Promise<any> {
+  let quoted;
+  if (targetGroupMsgId) {
+    quoted = {
+      key: {
+        remoteJid: groupId,
+        id: targetGroupMsgId,
+        ...(targetParticipant ? { participant: targetParticipant } : {})
+      },
+      message: { conversation: '' }
+    };
+  }
+
   if (hasImage(message)) {
     const buffer = await downloadMediaMessage(message, 'buffer', {});
     return sock.sendMessage(groupId, {
       image: buffer,
       caption: text,
-    });
+    }, { quoted });
   }
-  return sock.sendMessage(groupId, { text });
+  return sock.sendMessage(groupId, { text }, { quoted });
 }
 
 export async function handlePrivateMessage(
@@ -97,6 +111,9 @@ export async function handlePrivateMessage(
       }
 
       // Post to group (with image if present)
+      const targetGroupMsgId = parentReply ? parentReply.group_message_id : question.group_message_id;
+      const targetParticipant = parentReply ? parentReply.author_whatsapp_id : undefined;
+
       const sentToGroup = await sendToGroup(
         sock,
         config.bot.groupId,
@@ -105,7 +122,9 @@ export async function handlePrivateMessage(
           replyResult.data.reply_id,
           text
         ),
-        message
+        message,
+        targetGroupMsgId,
+        targetParticipant
       );
 
       // Store mapping for group message so others can reply to it

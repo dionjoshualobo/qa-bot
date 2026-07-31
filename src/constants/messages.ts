@@ -15,12 +15,12 @@ Reply to THIS message to answer.
 
 ━━━━━━━━━━━━━━━━━━`,
 
-  REPLY_TO_ASKER: (questionId: string, replyId: string, senderName: string, text: string) => `Anonymous reply to ${questionId}
+  REPLY_TO_ASKER: (questionId: string, replyId: string, senderName: string, text: string) => `Reply to ${questionId}
 
 ${replyId} - ${senderName}:
 ${text}`,
 
-  REPLY_TO_ASKER_ANONYMOUS: (questionId: string, replyId: string, text: string) => `Anonymous reply to ${questionId}
+  REPLY_TO_ASKER_ANONYMOUS: (questionId: string, replyId: string, text: string) => `Reply to ${questionId}
 
 ${replyId}:
 ${text}`,
