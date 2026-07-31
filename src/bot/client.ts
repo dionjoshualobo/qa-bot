@@ -2,7 +2,9 @@
  * WhatsApp client wrapper using Baileys
  */
 
-import makeWASocket, {
+import {
+  makeWASocket,
+  fetchLatestWaWebVersion,
   useMultiFileAuthState,
   DisconnectReason,
 } from '@whiskeysockets/baileys';
@@ -22,6 +24,7 @@ export async function startClient(sessionPath: string): Promise<WASocket> {
     auth: state,
     logger: pino({ level: 'silent' }),
     browser: ['QA Bot', 'Chrome', '1.0.0'],
+    version: (await fetchLatestWaWebVersion({})).version,
   });
 
   sock.ev.on('creds.update', saveCreds);
@@ -41,7 +44,8 @@ export async function startClient(sessionPath: string): Promise<WASocket> {
 
     if (connection === 'close') {
       const reason = (lastDisconnect?.error as any)?.output?.statusCode;
-      logger.wa.warn(`Connection closed, reason: ${reason}`);
+      console.dir(lastDisconnect, { depth: null });
+      console.dir(update, { depth: null });
 
       if (reason !== DisconnectReason.loggedOut) {
         logger.wa.info('Reconnecting...');
