@@ -3,49 +3,60 @@
  */
 
 export const MESSAGES = {
-  QUESTION_TEMPLATE: (questionId: string, text: string) => `━━━━━━━━━━━━━━━━━━
-
-❓ Anonymous Question
+  QUESTION_TEMPLATE: (
+    questionId: string,
+    text: string,
+  ) => `❓ Anonymous Question
 
 ID: ${questionId}
 
 ${text}
 
-Reply to THIS message to answer.
+Reply to this message to answer.`,
 
-━━━━━━━━━━━━━━━━━━`,
+  REPLY_TO_ASKER: (
+    questionId: string,
+    replyId: string,
+    senderName: string,
+    text: string,
+  ) => `New reply on ${questionId}
 
-  REPLY_TO_ASKER: (questionId: string, replyId: string, senderName: string, text: string) => `Reply to ${questionId}
-
-${replyId} - ${senderName}:
+${replyId} • ${senderName}
 ${text}`,
 
-  REPLY_TO_ASKER_ANONYMOUS: (questionId: string, replyId: string, text: string) => `Reply to ${questionId}
+  REPLY_TO_ASKER_ANONYMOUS: (
+    questionId: string,
+    replyId: string,
+    text: string,
+  ) => `New reply on ${questionId}
 
-${replyId}:
+${replyId}
 ${text}`,
 
-  ERROR_NOT_A_REPLY: 'Please reply to a question or reply message to participate in the thread.',
-  ERROR_QUESTION_NOT_FOUND: 'Could not find the original question for this reply.',
-  ERROR_GENERIC: 'An error occurred while processing your message. Please try again.',
-  
-  SUCCESS_QUESTION_POSTED: (questionId: string) => `Your question has been posted anonymously as ${questionId}.`,
+  ERROR_NOT_A_REPLY:
+    "Please reply to a question or reply message to participate in the thread.",
+  ERROR_QUESTION_NOT_FOUND:
+    "Could not find the original question for this reply.",
+  ERROR_GENERIC:
+    "An error occurred while processing your message. Please try again.",
 
-  REPLY_TEMPLATE: (questionId: string, replyId: string, text: string) => `━━━━━━━━━━━━━━━━━━
+  SUCCESS_QUESTION_POSTED: (questionId: string) =>
+    `Your question has been posted anonymously as ${questionId}.`,
 
-↩️ Reply to ${questionId}
+  REPLY_TEMPLATE: (
+    questionId: string,
+    replyId: string,
+    text: string,
+  ) => `↩️ Reply to ${questionId}
 
 ID: ${replyId}
 
-${text}
+${text}`,
 
-━━━━━━━━━━━━━━━━━━━`,
+  SUCCESS_REPLY_FORWARDED: (replyId: string) =>
+    `Your reply (${replyId}) has been posted anonymously.`,
 
-  SUCCESS_REPLY_FORWARDED: (replyId: string) => `Your reply (${replyId}) has been posted anonymously.`,
-
-  HELP: `━━━━━━━━━━━━━━━━━━
-
-📖 How to use this bot
+  HELP: `📖 How to use this bot
 
 • Use /q or /question followed by your question to post it anonymously to the group.
   Example: /q What time is the meeting?
@@ -58,9 +69,7 @@ ${text}
 
 • If you plan to reply in the group directly, use /exit first to avoid confusion.
 
-• Use /repo to get the source code repository link for this bot.
-
-━━━━━━━━━━━━━━━━━━━`,
+• Use /repo to get the source code repository link for this bot.`,
 
   SESSION_ENDED: `Session ended. You will no longer receive replies in this DM.
 
@@ -68,14 +77,10 @@ To start a new session, send a new question with /q or /question.`,
 
   SESSION_ACTIVE: `You already have an active session. Use /exit to close it before starting a new one.`,
 
-  EXIT_MESSAGE: (text: string) => `━━━━━━━━━━━━━━━━━━
-
-👋 ${text}
-
-━━━━━━━━━━━━━━━━━━━`,
+  EXIT_MESSAGE: (text: string) => `👋 ${text}`,
 
   REPO: `You can find the source code for this bot here:\nhttps://github.com/dionjoshualobo/qa-bot/`,
 };
 
-export const QUESTION_ID_PREFIX = 'Q';
-export const REPLY_ID_SEPARATOR = '.';
+export const QUESTION_ID_PREFIX = "Q";
+export const REPLY_ID_SEPARATOR = ".";
