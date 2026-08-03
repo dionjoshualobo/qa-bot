@@ -2,20 +2,31 @@
  * Private chat message handler
  */
 
-import type { WASocket } from '@whiskeysockets/baileys';
-import { downloadMediaMessage } from '@whiskeysockets/baileys';
-import { createNewQuestion, generateQuestionId, deleteUserData } from '../../services/questions.js';
-import { createNewReply } from '../../services/replies.js';
-import { resolveMessageMapping } from '../../services/mapping.js';
-import { createMapping } from '../../database/queries/mappings.js';
-import { getNextQuestionNumber } from '../../database/queries/questions.js';
-import { startSession, endSession, isSessionActive } from '../sessions.js';
-import { logger } from '../../utils/logger.js';
-import { MESSAGES } from '../../constants/messages.js';
-import type { Config } from '../../types/index.js';
+import type { WASocket } from "@whiskeysockets/baileys";
+import { downloadMediaMessage } from "@whiskeysockets/baileys";
+import {
+  createNewQuestion,
+  generateQuestionId,
+  deleteUserData,
+} from "../../services/questions.js";
+import { createNewReply } from "../../services/replies.js";
+import { resolveMessageMapping } from "../../services/mapping.js";
+import { createMapping } from "../../database/queries/mappings.js";
+import { getNextQuestionNumber } from "../../database/queries/questions.js";
+import { startSession, endSession, isSessionActive } from "../sessions.js";
+import { logger } from "../../utils/logger.js";
+import { MESSAGES } from "../../constants/messages.js";
+import type { Config } from "../../types/index.js";
 
 function hasImage(message: any): boolean {
   return !!message?.message?.imageMessage;
+}
+
+function getContextInfo(message: any): any {
+  return (
+    message?.message?.extendedTextMessage?.contextInfo ||
+    message?.message?.imageMessage?.contextInfo
+  );
 }
 
 async function sendToGroup(
@@ -24,7 +35,7 @@ async function sendToGroup(
   text: string,
   message: any,
   targetGroupMsgId?: string,
-  targetParticipant?: string
+  targetParticipant?: string,
 ): Promise<any> {
   const options: any = {};
   if (targetGroupMsgId) {
@@ -32,18 +43,22 @@ async function sendToGroup(
       key: {
         remoteJid: groupId,
         id: targetGroupMsgId,
-        participant: targetParticipant
+        participant: targetParticipant,
       },
-      message: { conversation: '' }
+      message: { conversation: "" },
     };
   }
 
   if (hasImage(message)) {
-    const buffer = await downloadMediaMessage(message, 'buffer', {});
-    return sock.sendMessage(groupId, {
-      image: buffer,
-      caption: text,
-    }, options);
+    const buffer = await downloadMediaMessage(message, "buffer", {});
+    return sock.sendMessage(
+      groupId,
+      {
+        image: buffer,
+        caption: text,
+      },
+      options,
+    );
   }
   return sock.sendMessage(groupId, { text }, options);
 }
@@ -52,7 +67,7 @@ export async function handlePrivateMessage(
   sock: WASocket,
   message: any,
   text: string,
-  config: Config
+  config: Config,
 ): Promise<void> {
   const authorId = message.key.remoteJid!;
   const trimmed = text.trim();
@@ -73,14 +88,14 @@ export async function handlePrivateMessage(
   const exitMatch = trimmed.match(/^\/exit\s*(.*)/is);
   if (exitMatch) {
     const exitMessage = exitMatch[1]?.trim();
-    
+
     // Post exit message to group if provided
     if (exitMessage) {
       await sock.sendMessage(config.bot.groupId, {
         text: MESSAGES.EXIT_MESSAGE(exitMessage),
       });
     }
-    
+
     endSession(authorId);
     deleteUserData(authorId);
     await sock.sendMessage(authorId, { text: MESSAGES.SESSION_ENDED });
@@ -89,7 +104,7 @@ export async function handlePrivateMessage(
   }
 
   // Check if this is a reply to a forwarded message
-  const contextInfo = message.message?.extendedTextMessage?.contextInfo;
+  const contextInfo = getContextInfo(message);
   const quotedMsgId = contextInfo?.stanzaId;
 
   if (quotedMsgId) {
@@ -105,20 +120,24 @@ export async function handlePrivateMessage(
       const replyResult = await createNewReply(
         authorId,
         text,
-        message.key?.id ?? '',
+        message.key?.id ?? "",
         question.id,
-        parentReply?.id ?? null
+        parentReply?.id ?? null,
       );
 
       if (!replyResult.success) {
-        logger.bot.error('Failed to create reply', replyResult.error);
+        logger.bot.error("Failed to create reply", replyResult.error);
         await sock.sendMessage(authorId, { text: MESSAGES.ERROR_GENERIC });
         return;
       }
 
       // Post to group (with image if present)
-      const targetGroupMsgId = parentReply ? parentReply.group_message_id : question.group_message_id;
-      const targetParticipant = parentReply ? parentReply.author_whatsapp_id : undefined;
+      const targetGroupMsgId = parentReply
+        ? parentReply.group_message_id
+        : question.group_message_id;
+      const targetParticipant = parentReply
+        ? parentReply.author_whatsapp_id
+        : undefined;
 
       const sentToGroup = await sendToGroup(
         sock,
@@ -126,11 +145,11 @@ export async function handlePrivateMessage(
         MESSAGES.REPLY_TEMPLATE(
           question.question_id,
           replyResult.data.reply_id,
-          text
+          text,
         ),
         message,
         targetGroupMsgId,
-        targetParticipant
+        targetParticipant,
       );
 
       // Store mapping for group message so others can reply to it
@@ -148,7 +167,7 @@ export async function handlePrivateMessage(
       });
 
       logger.bot.info(
-        `Posted reply ${replyResult.data.reply_id} to group from private chat`
+        `Posted reply ${replyResult.data.reply_id} to group from private chat`,
       );
       return;
     }
@@ -157,7 +176,7 @@ export async function handlePrivateMessage(
   // Not a reply to forwarded message - check for /q or /question command
   const match = text.match(/^\/(?:q|question)\s+(.*)/is);
   if (!match || !match[1]) {
-    logger.bot.debug('Ignoring non-command message');
+    logger.bot.debug("Ignoring non-command message");
     return;
   }
 
@@ -169,7 +188,7 @@ export async function handlePrivateMessage(
 
   const questionText = match[1].trim();
   if (!questionText) {
-    logger.bot.debug('Ignoring empty question');
+    logger.bot.debug("Ignoring empty question");
     return;
   }
 
@@ -181,7 +200,10 @@ export async function handlePrivateMessage(
     // Generate question ID first
     const nextNumResult = getNextQuestionNumber();
     if (!nextNumResult.success) {
-      logger.bot.error('Failed to get next question number', nextNumResult.error);
+      logger.bot.error(
+        "Failed to get next question number",
+        nextNumResult.error,
+      );
       await sock.sendMessage(authorId, { text: MESSAGES.ERROR_GENERIC });
       return;
     }
@@ -193,15 +215,20 @@ export async function handlePrivateMessage(
       sock,
       groupId,
       MESSAGES.QUESTION_TEMPLATE(questionId, questionText),
-      message
+      message,
     );
-    const groupMsgId = sent?.key?.id ?? '';
+    const groupMsgId = sent?.key?.id ?? "";
 
     // Create question in database
-    const questionResult = await createNewQuestion(authorId, questionText, groupMsgId, questionId);
+    const questionResult = await createNewQuestion(
+      authorId,
+      questionText,
+      groupMsgId,
+      questionId,
+    );
 
     if (!questionResult.success) {
-      logger.bot.error('Failed to create question', questionResult.error);
+      logger.bot.error("Failed to create question", questionResult.error);
       await sock.sendMessage(authorId, { text: MESSAGES.ERROR_GENERIC });
       return;
     }
@@ -216,7 +243,9 @@ export async function handlePrivateMessage(
 
     logger.bot.info(`Posted question ${questionId} to group`);
   } catch (error) {
-    logger.bot.error('Error handling private message', error);
-    await sock.sendMessage(message.key.remoteJid!, { text: MESSAGES.ERROR_GENERIC });
+    logger.bot.error("Error handling private message", error);
+    await sock.sendMessage(message.key.remoteJid!, {
+      text: MESSAGES.ERROR_GENERIC,
+    });
   }
 }
