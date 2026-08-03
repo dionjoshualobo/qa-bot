@@ -119,7 +119,7 @@ export async function handlePrivateMessage(
       // Create reply in database
       const replyResult = await createNewReply(
         authorId,
-        text,
+        trimmed,
         message.key?.id ?? "",
         question.id,
         parentReply?.id ?? null,
@@ -145,7 +145,7 @@ export async function handlePrivateMessage(
         MESSAGES.REPLY_TEMPLATE(
           question.question_id,
           replyResult.data.reply_id,
-          text,
+          trimmed,
         ),
         message,
         targetGroupMsgId,
@@ -154,11 +154,18 @@ export async function handlePrivateMessage(
 
       // Store mapping for group message so others can reply to it
       if (sentToGroup?.key?.id) {
-        createMapping({
+        const mappingResult = createMapping({
           whatsapp_message_id: sentToGroup.key.id,
           question_id: null,
           reply_id: replyResult.data.id,
         });
+
+        if (!mappingResult.success) {
+          logger.bot.error(
+            `Failed to create mapping for posted reply ${replyResult.data.reply_id}`,
+            mappingResult.error,
+          );
+        }
       }
 
       // Confirm to user
@@ -174,7 +181,7 @@ export async function handlePrivateMessage(
   }
 
   // Not a reply to forwarded message - check for /q or /question command
-  const match = text.match(/^\/(?:q|question)\s+(.*)/is);
+  const match = trimmed.match(/^\/(?:q|question)\s+(.*)/is);
   if (!match || !match[1]) {
     logger.bot.debug("Ignoring non-command message");
     return;

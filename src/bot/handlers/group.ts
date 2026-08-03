@@ -38,9 +38,10 @@ export async function handleGroupMessage(
   _config: Config,
 ): Promise<void> {
   const text = extractText(message);
+  const trimmedText = text.trim();
 
   // Handle /repo
-  if (/^\/repo$/i.test(text.trim())) {
+  if (/^\/repo$/i.test(trimmedText)) {
     const remoteJid = message.key?.remoteJid;
     if (remoteJid) {
       await sock.sendMessage(remoteJid, { text: MESSAGES.REPO });
@@ -54,7 +55,7 @@ export async function handleGroupMessage(
     return;
   }
 
-  if (!text) {
+  if (!trimmedText) {
     logger.bot.debug("Ignoring empty reply");
     return;
   }
@@ -91,7 +92,7 @@ export async function handleGroupMessage(
 
     const replyResult = await createNewReply(
       authorId,
-      text,
+      trimmedText,
       msgId,
       question.id,
       parentReply?.id ?? null,
@@ -109,7 +110,7 @@ export async function handleGroupMessage(
       question.question_id,
       replyResult.data.reply_id,
       senderName,
-      text,
+      trimmedText,
     );
 
     // Check if asker has active session before forwarding
@@ -136,11 +137,18 @@ export async function handleGroupMessage(
 
     // Store mapping for forwarded message so asker can reply to it
     if (sent?.key?.id) {
-      createMapping({
+      const mappingResult = createMapping({
         whatsapp_message_id: sent.key.id,
         question_id: null,
         reply_id: replyResult.data.id,
       });
+
+      if (!mappingResult.success) {
+        logger.bot.error(
+          `Failed to create mapping for forwarded reply ${replyResult.data.reply_id}`,
+          mappingResult.error,
+        );
+      }
     }
 
     logger.bot.info(
