@@ -58,12 +58,12 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 process.on('uncaughtException', (error) => {
   logger.bot.error('Uncaught exception', error);
-  shutdown('uncaughtException');
+  shutdown('uncaughtException').catch(() => process.exit(1));
 });
 
 process.on('unhandledRejection', (reason) => {
   logger.bot.error('Unhandled rejection', reason);
-  shutdown('unhandledRejection');
+  shutdown('unhandledRejection').catch(() => process.exit(1));
 });
 
 main();
