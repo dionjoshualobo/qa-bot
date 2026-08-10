@@ -31,11 +31,7 @@ describe('generateQuestionId', () => {
 
 describe('createNewQuestion', () => {
   it('creates a question with auto-generated ID', async () => {
-    const result = await createNewQuestion(
-      '12345@s.whatsapp.net',
-      'What is love?',
-      'msg_001',
-    );
+    const result = await createNewQuestion('12345@s.whatsapp.net', 'What is love?', 'msg_001');
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -55,12 +51,7 @@ describe('createNewQuestion', () => {
   });
 
   it('uses pre-generated ID when provided', async () => {
-    const result = await createNewQuestion(
-      '12345@s.whatsapp.net',
-      'Test',
-      'msg_001',
-      'Q99',
-    );
+    const result = await createNewQuestion('12345@s.whatsapp.net', 'Test', 'msg_001', 'Q99');
 
     expect(result.success).toBe(true);
     if (result.success) {

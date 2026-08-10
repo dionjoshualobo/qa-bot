@@ -33,14 +33,37 @@ function insertTestQuestion(id = 1, questionId = 'Q1') {
 
 describe('generateReplyId', () => {
   it('generates direct reply ID', () => {
-    const question = { id: 1, question_id: 'Q1', author_whatsapp_id: '', text: '', group_message_id: '', created_at: '' };
+    const question = {
+      id: 1,
+      question_id: 'Q1',
+      author_whatsapp_id: '',
+      text: '',
+      group_message_id: '',
+      created_at: '',
+    };
     const id = generateReplyId(question, null, 1);
     expect(id).toBe('Q1.1');
   });
 
   it('generates nested reply ID', () => {
-    const question = { id: 1, question_id: 'Q1', author_whatsapp_id: '', text: '', group_message_id: '', created_at: '' };
-    const parent = { id: 1, reply_id: 'Q1.1', question_id: 1, parent_reply_id: null, group_message_id: '', author_whatsapp_id: '', text: '', created_at: '' };
+    const question = {
+      id: 1,
+      question_id: 'Q1',
+      author_whatsapp_id: '',
+      text: '',
+      group_message_id: '',
+      created_at: '',
+    };
+    const parent = {
+      id: 1,
+      reply_id: 'Q1.1',
+      question_id: 1,
+      parent_reply_id: null,
+      group_message_id: '',
+      author_whatsapp_id: '',
+      text: '',
+      created_at: '',
+    };
     const id = generateReplyId(question, parent, 2);
     expect(id).toBe('Q1.1.2');
   });
@@ -50,13 +73,7 @@ describe('createNewReply', () => {
   it('creates a reply to a question', async () => {
     insertTestQuestion();
 
-    const result = await createNewReply(
-      '222@s.whatsapp.net',
-      'Great question!',
-      'msg_r1',
-      1,
-      null,
-    );
+    const result = await createNewReply('222@s.whatsapp.net', 'Great question!', 'msg_r1', 1, null);
 
     expect(result.success).toBe(true);
     if (result.success) {
