@@ -13,15 +13,15 @@ let db: Database.Database | null = null;
 export function initDatabase(dbPath: string): Result<Database.Database, Error> {
   try {
     logger.db.info(`Initializing database at ${dbPath}`);
-    
+
     db = new Database(dbPath);
-    
+
     // Enable foreign keys
     db.pragma('foreign_keys = ON');
-    
+
     // Enable WAL mode for better concurrent performance
     db.pragma('journal_mode = WAL');
-    
+
     // Create tables
     db.exec(SCHEMA.users);
     db.exec(SCHEMA.questions);
@@ -29,12 +29,12 @@ export function initDatabase(dbPath: string): Result<Database.Database, Error> {
     db.exec(SCHEMA.seed_question_counter);
     db.exec(SCHEMA.replies);
     db.exec(SCHEMA.message_mappings);
-    
+
     // Create indexes
     for (const indexSql of SCHEMA.indexes) {
       db.exec(indexSql);
     }
-    
+
     logger.db.info('Database initialized successfully');
     return ok(db);
   } catch (error) {

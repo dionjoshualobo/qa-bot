@@ -14,18 +14,14 @@ export function createMapping(data: MessageMappingInsert): Result<MessageMapping
       INSERT INTO message_mappings (whatsapp_message_id, question_id, reply_id)
       VALUES (?, ?, ?)
     `);
-    
-    const info = stmt.run(
-      data.whatsapp_message_id,
-      data.question_id,
-      data.reply_id
-    );
-    
+
+    const info = stmt.run(data.whatsapp_message_id, data.question_id, data.reply_id);
+
     const mapping = getMappingById(Number(info.lastInsertRowid));
     if (!mapping.success) {
       return mapping;
     }
-    
+
     logger.db.debug(`Created mapping for message: ${data.whatsapp_message_id}`);
     return ok(mapping.data);
   } catch (error) {
@@ -40,13 +36,13 @@ export function getMappingById(id: number): Result<MessageMapping, Error> {
     const stmt = db.prepare(`
       SELECT * FROM message_mappings WHERE id = ?
     `);
-    
+
     const mapping = stmt.get(id) as MessageMapping | undefined;
-    
+
     if (!mapping) {
       return err(new Error(`Mapping not found: ${id}`));
     }
-    
+
     return ok(mapping);
   } catch (error) {
     logger.db.error('Failed to get mapping by id', error);
@@ -54,15 +50,17 @@ export function getMappingById(id: number): Result<MessageMapping, Error> {
   }
 }
 
-export function getMappingByWhatsAppMessageId(whatsappMessageId: string): Result<MessageMapping | null, Error> {
+export function getMappingByWhatsAppMessageId(
+  whatsappMessageId: string,
+): Result<MessageMapping | null, Error> {
   try {
     const db = getDatabase();
     const stmt = db.prepare(`
       SELECT * FROM message_mappings WHERE whatsapp_message_id = ?
     `);
-    
+
     const mapping = stmt.get(whatsappMessageId) as MessageMapping | undefined;
-    
+
     return ok(mapping ?? null);
   } catch (error) {
     logger.db.error('Failed to get mapping by WhatsApp message id', error);

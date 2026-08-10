@@ -17,7 +17,7 @@ export interface ResolvedMapping {
 }
 
 export async function resolveMessageMapping(
-  whatsappMessageId: string
+  whatsappMessageId: string,
 ): Promise<Result<ResolvedMapping | null, Error>> {
   logger.mapping.debug(`Resolving mapping for message: ${whatsappMessageId}`);
 

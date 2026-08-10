@@ -24,7 +24,7 @@ export async function createNewQuestion(
   authorWhatsappId: string,
   text: string,
   groupMessageId: string,
-  preGeneratedQuestionId?: string
+  preGeneratedQuestionId?: string,
 ): Promise<Result<Question, Error>> {
   logger.question.info(`Creating new question from ${authorWhatsappId}`);
 

@@ -10,10 +10,12 @@ import { logger } from '../utils/logger.js';
 import type { Config } from '../types/index.js';
 
 function extractText(message: any): string {
-  return message?.message?.conversation
-    || message?.message?.extendedTextMessage?.text
-    || message?.message?.imageMessage?.caption
-    || '';
+  return (
+    message?.message?.conversation ||
+    message?.message?.extendedTextMessage?.text ||
+    message?.message?.imageMessage?.caption ||
+    ''
+  );
 }
 
 export function registerEventHandlers(sock: WASocket, config: Config): void {
@@ -37,7 +39,11 @@ export function registerEventHandlers(sock: WASocket, config: Config): void {
         }
 
         // Private messages: JID with no @ or @lid
-        if (!from.endsWith('@g.us') && !from.endsWith('@newsletter') && !from.endsWith('@broadcast')) {
+        if (
+          !from.endsWith('@g.us') &&
+          !from.endsWith('@newsletter') &&
+          !from.endsWith('@broadcast')
+        ) {
           await handlePrivateMessage(sock, message, text, config);
         }
       } catch (error) {

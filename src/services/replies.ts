@@ -20,7 +20,7 @@ import { REPLY_ID_SEPARATOR } from '../constants/messages.js';
 export function generateReplyId(
   question: Question,
   parentReply: Reply | null,
-  replyNumber: number
+  replyNumber: number,
 ): string {
   if (parentReply === null) {
     // Direct reply to question
@@ -36,7 +36,7 @@ export async function createNewReply(
   text: string,
   groupMessageId: string,
   questionId: number,
-  parentReplyId: number | null
+  parentReplyId: number | null,
 ): Promise<Result<Reply, Error>> {
   logger.reply.info(`Creating new reply from ${authorWhatsappId}`);
 
@@ -68,11 +68,7 @@ export async function createNewReply(
     return replyNumberResult;
   }
 
-  const replyId = generateReplyId(
-    questionResult.data,
-    parentReply,
-    replyNumberResult.data
-  );
+  const replyId = generateReplyId(questionResult.data, parentReply, replyNumberResult.data);
 
   // Create reply
   const replyResult = createReply({

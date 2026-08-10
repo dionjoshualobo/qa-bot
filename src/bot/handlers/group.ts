@@ -2,22 +2,22 @@
  * Group chat message handler
  */
 
-import type { WASocket } from "@whiskeysockets/baileys";
-import { downloadMediaMessage } from "@whiskeysockets/baileys";
-import { resolveMessageMapping } from "../../services/mapping.js";
-import { createNewReply } from "../../services/replies.js";
-import { createMapping } from "../../database/queries/mappings.js";
-import { isSessionActive } from "../sessions.js";
-import { logger } from "../../utils/logger.js";
-import { MESSAGES } from "../../constants/messages.js";
-import type { Config } from "../../types/index.js";
+import type { WASocket } from '@whiskeysockets/baileys';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
+import { resolveMessageMapping } from '../../services/mapping.js';
+import { createNewReply } from '../../services/replies.js';
+import { createMapping } from '../../database/queries/mappings.js';
+import { isSessionActive } from '../sessions.js';
+import { logger } from '../../utils/logger.js';
+import { MESSAGES } from '../../constants/messages.js';
+import type { Config } from '../../types/index.js';
 
 function extractText(message: any): string {
   return (
     message?.message?.conversation ||
     message?.message?.extendedTextMessage?.text ||
     message?.message?.imageMessage?.caption ||
-    ""
+    ''
   );
 }
 
@@ -51,12 +51,12 @@ export async function handleGroupMessage(
 
   const contextInfo = getContextInfo(message);
   if (!contextInfo?.stanzaId) {
-    logger.bot.debug("Ignoring non-reply message in group");
+    logger.bot.debug('Ignoring non-reply message in group');
     return;
   }
 
   if (!trimmedText) {
-    logger.bot.debug("Ignoring empty reply");
+    logger.bot.debug('Ignoring empty reply');
     return;
   }
 
@@ -66,7 +66,7 @@ export async function handleGroupMessage(
   const msgId = message.key?.id;
 
   if (!authorId || !remoteJid || !msgId) {
-    logger.bot.debug("Missing sender, group info, or message ID");
+    logger.bot.debug('Missing sender, group info, or message ID');
     return;
   }
 
@@ -76,13 +76,13 @@ export async function handleGroupMessage(
     const mappingResult = await resolveMessageMapping(quotedMsgId);
 
     if (!mappingResult.success) {
-      logger.bot.error("Failed to resolve mapping", mappingResult.error);
+      logger.bot.error('Failed to resolve mapping', mappingResult.error);
       await sock.sendMessage(remoteJid, { text: MESSAGES.ERROR_GENERIC });
       return;
     }
 
     if (!mappingResult.data) {
-      logger.bot.debug("Reply is not to a tracked message");
+      logger.bot.debug('Reply is not to a tracked message');
       return;
     }
 
@@ -99,12 +99,12 @@ export async function handleGroupMessage(
     );
 
     if (!replyResult.success) {
-      logger.bot.error("Failed to create reply", replyResult.error);
+      logger.bot.error('Failed to create reply', replyResult.error);
       await sock.sendMessage(remoteJid, { text: MESSAGES.ERROR_GENERIC });
       return;
     }
 
-    const senderName = message.pushName || "Anonymous";
+    const senderName = message.pushName || 'Anonymous';
 
     const replyMessage = MESSAGES.REPLY_TO_ASKER(
       question.question_id,
@@ -124,7 +124,7 @@ export async function handleGroupMessage(
     // Forward to asker (with image if present)
     let sent;
     if (hasImage(message)) {
-      const buffer = await downloadMediaMessage(message, "buffer", {});
+      const buffer = await downloadMediaMessage(message, 'buffer', {});
       sent = await sock.sendMessage(question.author_whatsapp_id, {
         image: buffer,
         caption: replyMessage,
@@ -151,11 +151,9 @@ export async function handleGroupMessage(
       }
     }
 
-    logger.bot.info(
-      `Forwarded reply ${replyResult.data.reply_id} to question asker`,
-    );
+    logger.bot.info(`Forwarded reply ${replyResult.data.reply_id} to question asker`);
   } catch (error) {
-    logger.bot.error("Error handling group message", error);
+    logger.bot.error('Error handling group message', error);
     const remoteJid = message.key?.remoteJid;
     if (remoteJid) {
       await sock.sendMessage(remoteJid, { text: MESSAGES.ERROR_GENERIC });

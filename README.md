@@ -45,12 +45,12 @@ On first run, scan the QR code. The bot will be the account from which the QR co
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `/help` | Show usage instructions |
-| `/q <question>` or `/question <question>` | Post a question anonymously to the group |
-| `/exit` | Stop receiving replies in DM |
-| `/exit <text>` | Same as /exit, but sends a final message to the group |
+| Command                                   | Description                                           |
+| ----------------------------------------- | ----------------------------------------------------- |
+| `/help`                                   | Show usage instructions                               |
+| `/q <question>` or `/question <question>` | Post a question anonymously to the group              |
+| `/exit`                                   | Stop receiving replies in DM                          |
+| `/exit <text>`                            | Same as /exit, but sends a final message to the group |
 
 ## How It Works
 
@@ -125,23 +125,26 @@ npm run get-group-id  # List your WhatsApp groups
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GROUP_ID` | WhatsApp group ID (`@g.us`) | Yes |
-| `SESSION_PATH` | Auth session storage | No |
-| `DATABASE_PATH` | SQLite database path | No |
-| `LOG_LEVEL` | debug/info/warn/error | No |
+| Variable        | Description                 | Required |
+| --------------- | --------------------------- | -------- |
+| `GROUP_ID`      | WhatsApp group ID (`@g.us`) | Yes      |
+| `SESSION_PATH`  | Auth session storage        | No       |
+| `DATABASE_PATH` | SQLite database path        | No       |
+| `LOG_LEVEL`     | debug/info/warn/error       | No       |
 
 ## Troubleshooting
 
 **QR code not appearing**
+
 - Delete `.baileys_auth/` and restart
 
 **Bot not responding in group**
+
 - Check `GROUP_ID` is correct
 - Bot must be a member of the group
 
 **Database errors**
+
 - Check write permissions
 - Verify disk space
 

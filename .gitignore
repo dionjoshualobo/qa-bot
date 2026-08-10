@@ -53,4 +53,4 @@ coverage/
 .npm
 
 # Optional eslint cache
-.eslintcacheqa-bot.zip
+.eslintcache

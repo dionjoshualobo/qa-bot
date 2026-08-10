@@ -14,19 +14,19 @@ export function createQuestion(data: QuestionInsert): Result<Question, Error> {
       INSERT INTO questions (question_id, author_whatsapp_id, text, group_message_id)
       VALUES (?, ?, ?, ?)
     `);
-    
+
     const info = stmt.run(
       data.question_id,
       data.author_whatsapp_id,
       data.text,
-      data.group_message_id
+      data.group_message_id,
     );
-    
+
     const question = getQuestionById(Number(info.lastInsertRowid));
     if (!question.success) {
       return question;
     }
-    
+
     logger.db.debug(`Created question: ${data.question_id}`);
     return ok(question.data);
   } catch (error) {
@@ -41,13 +41,13 @@ export function getQuestionById(id: number): Result<Question, Error> {
     const stmt = db.prepare(`
       SELECT * FROM questions WHERE id = ?
     `);
-    
+
     const question = stmt.get(id) as Question | undefined;
-    
+
     if (!question) {
       return err(new Error(`Question not found: ${id}`));
     }
-    
+
     return ok(question);
   } catch (error) {
     logger.db.error('Failed to get question by id', error);
@@ -61,9 +61,9 @@ export function getQuestionByQuestionId(questionId: string): Result<Question | n
     const stmt = db.prepare(`
       SELECT * FROM questions WHERE question_id = ?
     `);
-    
+
     const question = stmt.get(questionId) as Question | undefined;
-    
+
     return ok(question ?? null);
   } catch (error) {
     logger.db.error('Failed to get question by question_id', error);
@@ -71,15 +71,17 @@ export function getQuestionByQuestionId(questionId: string): Result<Question | n
   }
 }
 
-export function getQuestionByGroupMessageId(groupMessageId: string): Result<Question | null, Error> {
+export function getQuestionByGroupMessageId(
+  groupMessageId: string,
+): Result<Question | null, Error> {
   try {
     const db = getDatabase();
     const stmt = db.prepare(`
       SELECT * FROM questions WHERE group_message_id = ?
     `);
-    
+
     const question = stmt.get(groupMessageId) as Question | undefined;
-    
+
     return ok(question ?? null);
   } catch (error) {
     logger.db.error('Failed to get question by group message id', error);
@@ -91,7 +93,8 @@ export function getNextQuestionNumber(): Result<number, Error> {
   try {
     const db = getDatabase();
     const nextQuestionNumber = db.transaction(() => {
-      db.prepare(`
+      db.prepare(
+        `
         INSERT OR IGNORE INTO question_counters (name, value)
         SELECT 'questions', COALESCE(MAX(value), 0)
         FROM (
@@ -101,17 +104,24 @@ export function getNextQuestionNumber(): Result<number, Error> {
           FROM questions
           WHERE question_id GLOB 'Q[0-9]*'
         )
-      `).run();
+      `,
+      ).run();
 
-      db.prepare(`
+      db.prepare(
+        `
         UPDATE question_counters
         SET value = value + 1
         WHERE name = 'questions'
-      `).run();
+      `,
+      ).run();
 
-      const result = db.prepare(`
+      const result = db
+        .prepare(
+          `
         SELECT value FROM question_counters WHERE name = 'questions'
-      `).get() as { value: number } | undefined;
+      `,
+        )
+        .get() as { value: number } | undefined;
 
       if (!result) {
         throw new Error('Question counter not initialized');
@@ -130,41 +140,53 @@ export function getNextQuestionNumber(): Result<number, Error> {
 export function deleteUserData(authorWhatsappId: string): Result<void, Error> {
   try {
     const db = getDatabase();
-    
+
     // Get all question IDs for this user
-    const questions = db.prepare(`
+    const questions = db
+      .prepare(
+        `
       SELECT id FROM questions WHERE author_whatsapp_id = ?
-    `).all(authorWhatsappId) as { id: number }[];
-    
+    `,
+      )
+      .all(authorWhatsappId) as { id: number }[];
+
     if (questions.length === 0) {
       return ok(undefined);
     }
-    
-    const questionIds = questions.map(q => q.id);
+
+    const questionIds = questions.map((q) => q.id);
     const placeholders = questionIds.map(() => '?').join(',');
-    
+
     // Delete mappings for questions
-    db.prepare(`
+    db.prepare(
+      `
       DELETE FROM message_mappings 
       WHERE question_id IN (SELECT id FROM questions WHERE author_whatsapp_id = ?)
-    `).run(authorWhatsappId);
-    
+    `,
+    ).run(authorWhatsappId);
+
     // Delete mappings for replies to these questions
-    db.prepare(`
+    db.prepare(
+      `
       DELETE FROM message_mappings 
       WHERE reply_id IN (SELECT id FROM replies WHERE question_id IN (${placeholders}))
-    `).run(...questionIds);
-    
+    `,
+    ).run(...questionIds);
+
     // Delete replies to these questions
-    db.prepare(`
+    db.prepare(
+      `
       DELETE FROM replies WHERE question_id IN (${placeholders})
-    `).run(...questionIds);
-    
+    `,
+    ).run(...questionIds);
+
     // Delete questions
-    db.prepare(`
+    db.prepare(
+      `
       DELETE FROM questions WHERE author_whatsapp_id = ?
-    `).run(authorWhatsappId);
-    
+    `,
+    ).run(authorWhatsappId);
+
     logger.db.debug(`Deleted data for user: ${authorWhatsappId}`);
     return ok(undefined);
   } catch (error) {

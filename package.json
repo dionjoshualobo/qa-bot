@@ -9,6 +9,8 @@
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "get-group-id": "tsx scripts/get-group-id.ts"
   },
   "repository": {
@@ -27,6 +29,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^26.1.1",
     "@types/qrcode-terminal": "^0.12.2",
+    "prettier": "^3.9.6",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"
   },

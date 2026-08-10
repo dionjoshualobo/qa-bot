@@ -3,10 +3,7 @@
  */
 
 export const MESSAGES = {
-  QUESTION_TEMPLATE: (
-    questionId: string,
-    text: string,
-  ) => `❓ Anonymous Question
+  QUESTION_TEMPLATE: (questionId: string, text: string) => `❓ Anonymous Question
 
 ID: ${questionId}
 
@@ -33,21 +30,14 @@ ${text}`,
 ${replyId}
 ${text}`,
 
-  ERROR_NOT_A_REPLY:
-    "Please reply to a question or reply message to participate in the thread.",
-  ERROR_QUESTION_NOT_FOUND:
-    "Could not find the original question for this reply.",
-  ERROR_GENERIC:
-    "An error occurred while processing your message. Please try again.",
+  ERROR_NOT_A_REPLY: 'Please reply to a question or reply message to participate in the thread.',
+  ERROR_QUESTION_NOT_FOUND: 'Could not find the original question for this reply.',
+  ERROR_GENERIC: 'An error occurred while processing your message. Please try again.',
 
   SUCCESS_QUESTION_POSTED: (questionId: string) =>
     `Your question has been posted anonymously as ${questionId}.`,
 
-  REPLY_TEMPLATE: (
-    questionId: string,
-    replyId: string,
-    text: string,
-  ) => `↩️ Reply to ${questionId}
+  REPLY_TEMPLATE: (questionId: string, replyId: string, text: string) => `↩️ Reply to ${questionId}
 
 ID: ${replyId}
 
@@ -82,5 +72,5 @@ To start a new session, send a new question with /q or /question.`,
   REPO: `You can find the source code for this bot here:\nhttps://github.com/dionjoshualobo/qa-bot/`,
 };
 
-export const QUESTION_ID_PREFIX = "Q";
-export const REPLY_ID_SEPARATOR = ".";
+export const QUESTION_ID_PREFIX = 'Q';
+export const REPLY_ID_SEPARATOR = '.';
