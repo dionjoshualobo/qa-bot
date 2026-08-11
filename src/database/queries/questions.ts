@@ -180,10 +180,32 @@ export function deleteUserData(authorWhatsappId: string): Result<void, Error> {
     `,
     ).run(...questionIds);
 
+    // Delete mappings for replies this user authored
+    db.prepare(
+      `
+      DELETE FROM message_mappings
+      WHERE reply_id IN (SELECT id FROM replies WHERE author_whatsapp_id = ?)
+    `,
+    ).run(authorWhatsappId);
+
+    // Delete replies this user authored (to other users' questions)
+    db.prepare(
+      `
+      DELETE FROM replies WHERE author_whatsapp_id = ?
+    `,
+    ).run(authorWhatsappId);
+
     // Delete questions
     db.prepare(
       `
       DELETE FROM questions WHERE author_whatsapp_id = ?
+    `,
+    ).run(authorWhatsappId);
+
+    // Delete user row (counter is in question_counters, unaffected)
+    db.prepare(
+      `
+      DELETE FROM users WHERE whatsapp_id = ?
     `,
     ).run(authorWhatsappId);
 
