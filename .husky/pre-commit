@@ -1,1 +1,1 @@
-npm run format:check && npm run type-check
+npm run format:check && npm run type-check && npm install --package-lock-only --ignore-scripts && git diff --exit-code package-lock.json
