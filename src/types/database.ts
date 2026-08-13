@@ -36,6 +36,25 @@ export interface MessageMapping {
   created_at: string;
 }
 
+export type PendingQuestionStatus = 'pending' | 'posted' | 'rejected';
+
+export interface PendingQuestion {
+  id: number;
+  asker_whatsapp_id: string;
+  text: string;
+  image_buffer: Buffer | null;
+  preview_message_id: string;
+  status: PendingQuestionStatus;
+  created_at: string;
+}
+
+export interface PendingQuestionInsert {
+  asker_whatsapp_id: string;
+  text: string;
+  image_buffer: Buffer | null;
+  preview_message_id: string;
+}
+
 /**
  * Insert types (without auto-generated fields)
  */

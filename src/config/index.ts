@@ -34,6 +34,7 @@ export function loadConfig(): Config {
     },
     bot: {
       groupId: getEnvVar('GROUP_ID'),
+      ownerJid: getEnvVar('OWNER_WHATSAPP_ID'),
     },
     logging: {
       level: getLogLevel(),

@@ -11,6 +11,7 @@ export function createTestDb(): Database.Database {
   db.exec(SCHEMA.seed_question_counter);
   db.exec(SCHEMA.replies);
   db.exec(SCHEMA.message_mappings);
+  db.exec(SCHEMA.pending_questions);
 
   for (const indexSql of SCHEMA.indexes) {
     db.exec(indexSql);

@@ -70,6 +70,23 @@ To start a new session, send a new question with /q or /question.`,
   EXIT_MESSAGE: (text: string) => `👋 ${text}`,
 
   REPO: `You can find the source code for this bot here:\nhttps://github.com/dionjoshualobo/qa-bot/`,
+
+  PENDING_QUESTION_PREVIEW: (askerJid: string, text: string) => `📝 Question submitted for review
+
+From: ${askerJid}
+
+${text}
+
+Reply with approve or reject`,
+
+  SUCCESS_QUESTION_SUBMITTED: `Your question has been submitted for review and will be posted once approved.`,
+
+  APPROVED_NOTIFY_OWNER: (questionId: string) => `✅ Approved and posted ${questionId} to group.`,
+
+  REJECTED_NOTIFY_ASKER: `Your question was not approved by the admin.`,
+
+  REJECTED_NOTIFY_OWNER: (questionId: string, reason: string) =>
+    `❌ Rejected ${questionId}.${reason ? ` Reason: ${reason}` : ''}`,
 };
 
 export const QUESTION_ID_PREFIX = 'Q';

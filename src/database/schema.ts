@@ -62,6 +62,20 @@ export const SCHEMA = {
     )
   `,
 
+  pending_questions: `
+    CREATE TABLE IF NOT EXISTS pending_questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      asker_whatsapp_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      image_buffer BLOB,
+      preview_message_id TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'posted', 'rejected')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (asker_whatsapp_id) REFERENCES users(whatsapp_id)
+    )
+  `,
+
   indexes: [
     'CREATE INDEX IF NOT EXISTS idx_users_whatsapp_id ON users(whatsapp_id)',
     'CREATE INDEX IF NOT EXISTS idx_questions_question_id ON questions(question_id)',
@@ -74,6 +88,7 @@ export const SCHEMA = {
     'CREATE INDEX IF NOT EXISTS idx_mappings_whatsapp_message ON message_mappings(whatsapp_message_id)',
     'CREATE INDEX IF NOT EXISTS idx_mappings_question ON message_mappings(question_id)',
     'CREATE INDEX IF NOT EXISTS idx_mappings_reply ON message_mappings(reply_id)',
+    'CREATE INDEX IF NOT EXISTS idx_pending_status ON pending_questions(status)',
   ],
 
   seed_question_counter: `

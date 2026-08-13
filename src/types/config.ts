@@ -11,6 +11,7 @@ export interface Config {
   };
   bot: {
     groupId: string;
+    ownerJid: string;
   };
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error';

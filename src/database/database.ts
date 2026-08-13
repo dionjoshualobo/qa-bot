@@ -29,6 +29,7 @@ export function initDatabase(dbPath: string): Result<Database.Database, Error> {
     db.exec(SCHEMA.seed_question_counter);
     db.exec(SCHEMA.replies);
     db.exec(SCHEMA.message_mappings);
+    db.exec(SCHEMA.pending_questions);
 
     // Create indexes
     for (const indexSql of SCHEMA.indexes) {

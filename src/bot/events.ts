@@ -2,7 +2,7 @@
  * Event handlers for WhatsApp client
  */
 
-import { isJidGroup } from '@whiskeysockets/baileys';
+import { isJidGroup, extractMessageContent } from '@whiskeysockets/baileys';
 import type { WASocket } from '@whiskeysockets/baileys';
 import { handlePrivateMessage } from './handlers/private.js';
 import { handleGroupMessage } from './handlers/group.js';
@@ -22,11 +22,16 @@ export function registerEventHandlers(sock: WASocket, config: Config): void {
   logger.bot.info('Registering event handlers');
 
   sock.ev.on('messages.upsert', async ({ messages }) => {
-    for (const message of messages) {
+    for (const rawMessage of messages) {
       try {
-        if (message.key.fromMe) continue;
+        if (rawMessage.key.fromMe) continue;
 
-        const from = message.key.remoteJid!;
+        const from = rawMessage.key.remoteJid!;
+
+        // Unwrap ephemeralMessage/viewOnceMessage/editedMessage wrappers so
+        // handlers see the actual content (Baileys delivers the raw protobuf)
+        const message = { ...rawMessage, message: extractMessageContent(rawMessage.message) };
+
         const text = extractText(message);
 
         if (!text) continue;
