@@ -233,7 +233,12 @@ export async function handlePrivateMessage(
     const previewMsgId = previewMsg?.key?.id ?? '';
 
     // Create pending question row
-    const pendingResult = await createPendingQuestion(authorId, questionText, imageBuffer, previewMsgId);
+    const pendingResult = await createPendingQuestion(
+      authorId,
+      questionText,
+      imageBuffer,
+      previewMsgId,
+    );
     if (!pendingResult.success) {
       logger.bot.error('Failed to create pending question', pendingResult.error);
       await sock.sendMessage(authorId, { text: MESSAGES.ERROR_GENERIC });

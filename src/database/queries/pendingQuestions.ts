@@ -22,7 +22,9 @@ export function createPending(data: PendingQuestionInsert): Result<PendingQuesti
       data.preview_message_id,
     );
 
-    const row = db.prepare('SELECT * FROM pending_questions WHERE id = ?').get(info.lastInsertRowid) as any;
+    const row = db
+      .prepare('SELECT * FROM pending_questions WHERE id = ?')
+      .get(info.lastInsertRowid) as any;
     return ok(row as PendingQuestion);
   } catch (error) {
     logger.db.error('Failed to create pending question', error);
@@ -30,10 +32,14 @@ export function createPending(data: PendingQuestionInsert): Result<PendingQuesti
   }
 }
 
-export function getPendingByPreviewId(previewMessageId: string): Result<PendingQuestion | null, Error> {
+export function getPendingByPreviewId(
+  previewMessageId: string,
+): Result<PendingQuestion | null, Error> {
   try {
     const db = getDatabase();
-    const row = db.prepare('SELECT * FROM pending_questions WHERE preview_message_id = ?').get(previewMessageId) as any;
+    const row = db
+      .prepare('SELECT * FROM pending_questions WHERE preview_message_id = ?')
+      .get(previewMessageId) as any;
     return ok(row ?? null);
   } catch (error) {
     logger.db.error('Failed to get pending question by preview message id', error);
