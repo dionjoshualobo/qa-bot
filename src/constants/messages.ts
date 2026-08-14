@@ -85,8 +85,8 @@ Reply with approve or reject`,
 
   REJECTED_NOTIFY_ASKER: `Your question was not approved by the admin.`,
 
-  REJECTED_NOTIFY_OWNER: (questionId: string, reason: string) =>
-    `❌ Rejected ${questionId}.${reason ? ` Reason: ${reason}` : ''}`,
+  REJECTED_NOTIFY_OWNER: (questionText: string, reason: string) =>
+    `❌ Rejected question: "${questionText}"${reason ? `\nReason: ${reason}` : ''}`,
 };
 
 export const QUESTION_ID_PREFIX = 'Q';

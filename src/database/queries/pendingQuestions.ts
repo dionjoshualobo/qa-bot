@@ -47,6 +47,41 @@ export function getPendingByPreviewId(
   }
 }
 
+/**
+ * Get pending question by asker WhatsApp ID (fallback for when message ID lookup fails)
+ * Returns the most recent pending question from this asker
+ */
+export function getPendingByAsker(askerWhatsappId: string): Result<PendingQuestion | null, Error> {
+  try {
+    const db = getDatabase();
+    const row = db
+      .prepare(
+        "SELECT * FROM pending_questions WHERE asker_whatsapp_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1",
+      )
+      .get(askerWhatsappId) as any;
+    return ok(row ?? null);
+  } catch (error) {
+    logger.db.error('Failed to get pending question by asker', error);
+    return err(error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+/**
+ * Get the latest pending question (any asker). Used as fallback when no quoted msg id.
+ */
+export function getLatestPending(): Result<PendingQuestion | null, Error> {
+  try {
+    const db = getDatabase();
+    const row = db
+      .prepare("SELECT * FROM pending_questions WHERE status = 'pending' ORDER BY id DESC LIMIT 1")
+      .get() as any;
+    return ok(row ?? null);
+  } catch (error) {
+    logger.db.error('Failed to get latest pending question', error);
+    return err(error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
 export function markPendingPosted(id: number): Result<PendingQuestion, Error> {
   try {
     const db = getDatabase();
