@@ -14,9 +14,11 @@ import {
   markRejected,
 } from '../../services/pendingQuestions.js';
 import { getLatestPending } from '../../database/queries/pendingQuestions.js';
+import { updateReplyGroupMessageId } from '../../database/queries/replies.js';
 import { createMapping } from '../../database/queries/mappings.js';
 import { getNextQuestionNumber } from '../../database/queries/questions.js';
 import { startSession, endSession, isSessionActive } from '../sessions.js';
+import { getOwnerJid, getOwnerJids, isOwnerJid } from '../identity.js';
 import { logger } from '../../utils/logger.js';
 import { MESSAGES } from '../../constants/messages.js';
 import type { Config } from '../../types/index.js';
@@ -111,14 +113,14 @@ export async function handlePrivateMessage(
   const quotedMsgId = contextInfo?.stanzaId;
 
   // Helper to check for approve/reject commands
-  const checkApprovalCommand = (pending: any) => {
+  const checkApprovalCommand = async (pending: any) => {
     const trimmedLower = text.trim().toLowerCase();
     if (trimmedLower === 'approve' || trimmedLower.startsWith('approve ')) {
-      handleApprove(sock, pending, config);
+      await handleApprove(sock, pending, config);
       return true;
     }
     if (trimmedLower === 'reject' || trimmedLower.startsWith('reject ')) {
-      handleReject(sock, pending, text.trim(), config);
+      await handleReject(sock, pending, text.trim(), config);
       return true;
     }
     return false;
@@ -141,9 +143,9 @@ export async function handlePrivateMessage(
 
       // Only owner can approve/reject
       logger.bot.debug(
-        `Approval check: author=${authorId}, owner=${config.bot.ownerJid}, match=${authorId === config.bot.ownerJid}`,
+        `Approval check: author=${authorId}, owner=${getOwnerJids(sock, config).join(', ')}`,
       );
-      if (authorId !== config.bot.ownerJid) {
+      if (!isOwnerJid(sock, config, authorId)) {
         logger.bot.debug('Non-owner attempted approval on pending question');
         return;
       }
@@ -152,13 +154,13 @@ export async function handlePrivateMessage(
         `Pending question found: id=${pending.id}, previewMsgId=${pending.preview_message_id}`,
       );
 
-      if (checkApprovalCommand(pending)) {
+      if (await checkApprovalCommand(pending)) {
         return;
       }
 
       // Invalid response - notify owner
       await sock.sendMessage(authorId, {
-        text: 'Invalid response. Reply with "approve" or "reject" (optionally followed by a reason).',
+        text: MESSAGES.INVALID_APPROVAL_RESPONSE,
       });
       return;
     }
@@ -200,7 +202,9 @@ export async function handlePrivateMessage(
         targetParticipant,
       );
 
-      // Store mapping for group message so others can reply to it
+      // Store mapping for group message so others can reply to it, and fix
+      // the reply's group_message_id to the actual group post id (the reply
+      // row was created with the asker's DM message id).
       if (sentToGroup?.key?.id) {
         const mappingResult = createMapping({
           whatsapp_message_id: sentToGroup.key.id,
@@ -212,6 +216,14 @@ export async function handlePrivateMessage(
           logger.bot.error(
             `Failed to create mapping for posted reply ${replyResult.data.reply_id}`,
             mappingResult.error,
+          );
+        }
+
+        const updateResult = updateReplyGroupMessageId(replyResult.data.id, sentToGroup.key.id);
+        if (!updateResult.success) {
+          logger.bot.error(
+            `Failed to update group message id for reply ${replyResult.data.reply_id}`,
+            updateResult.error,
           );
         }
       }
@@ -230,7 +242,7 @@ export async function handlePrivateMessage(
   const match = trimmed.match(/^\/(?:q|question)\s+(.*)/is);
   if (!match || !match[1]) {
     // Owner can approve latest pending without quoting (fallback if msg id lookup fails)
-    if (authorId === config.bot.ownerJid && quotedMsgId === undefined) {
+    if (isOwnerJid(sock, config, authorId) && quotedMsgId === undefined) {
       const trimmedLower = text.trim().toLowerCase();
       if (
         trimmedLower === 'approve' ||
@@ -240,7 +252,7 @@ export async function handlePrivateMessage(
       ) {
         const latestResult = getLatestPending();
         if (latestResult.success && latestResult.data) {
-          if (checkApprovalCommand(latestResult.data)) {
+          if (await checkApprovalCommand(latestResult.data)) {
             return;
           }
         }
@@ -272,7 +284,7 @@ export async function handlePrivateMessage(
     }
 
     // Send preview to owner and capture the preview message ID
-    const ownerJid = config.bot.ownerJid;
+    const ownerJid = getOwnerJid(sock, config);
     const previewMsg = await sock.sendMessage(ownerJid, {
       text: MESSAGES.PENDING_QUESTION_PREVIEW(authorId, questionText),
     });
@@ -302,7 +314,7 @@ export async function handlePrivateMessage(
 }
 
 async function handleApprove(sock: WASocket, pending: any, config: Config): Promise<void> {
-  const ownerJid = config.bot.ownerJid;
+  const ownerJid = getOwnerJid(sock, config);
 
   // Generate question ID
   const nextNumResult = getNextQuestionNumber();
@@ -362,7 +374,7 @@ async function handleReject(
   rawText: string,
   config: Config,
 ): Promise<void> {
-  const ownerJid = config.bot.ownerJid;
+  const ownerJid = getOwnerJid(sock, config);
 
   // Extract reason: "reject" or "reject some reason" → "some reason"
   const reason = rawText.replace(/^reject\s*/i, '').trim();

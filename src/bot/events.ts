@@ -6,6 +6,7 @@ import { isJidGroup, extractMessageContent } from '@whiskeysockets/baileys';
 import type { WASocket } from '@whiskeysockets/baileys';
 import { handlePrivateMessage } from './handlers/private.js';
 import { handleGroupMessage } from './handlers/group.js';
+import { isOwnerJid } from './identity.js';
 import { logger } from '../utils/logger.js';
 import type { Config } from '../types/index.js';
 
@@ -24,9 +25,13 @@ export function registerEventHandlers(sock: WASocket, config: Config): void {
   sock.ev.on('messages.upsert', async ({ messages }) => {
     for (const rawMessage of messages) {
       try {
-        if (rawMessage.key.fromMe) continue;
-
         const from = rawMessage.key.remoteJid!;
+
+        // The account's own messages echo back with fromMe=true. Skip them
+        // EXCEPT the owner's messages in their own chat, which the bot must
+        // see so the owner can approve/reject previews by replying in their
+        // self-chat.
+        if (rawMessage.key.fromMe && !isOwnerJid(sock, config, from)) continue;
 
         // Unwrap ephemeralMessage/viewOnceMessage/editedMessage wrappers so
         // handlers see the actual content (Baileys delivers the raw protobuf)

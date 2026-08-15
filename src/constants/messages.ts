@@ -87,6 +87,9 @@ Reply with approve or reject`,
 
   REJECTED_NOTIFY_OWNER: (questionText: string, reason: string) =>
     `❌ Rejected question: "${questionText}"${reason ? `\nReason: ${reason}` : ''}`,
+
+  INVALID_APPROVAL_RESPONSE:
+    'Invalid response. Reply with "approve" or "reject" (optionally followed by a reason).',
 };
 
 export const QUESTION_ID_PREFIX = 'Q';

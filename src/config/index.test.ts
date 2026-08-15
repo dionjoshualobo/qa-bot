@@ -19,6 +19,7 @@ describe('loadConfig', () => {
     expect(config.whatsapp.sessionPath).toBe('/tmp/session');
     expect(config.database.path).toBe('/tmp/test.db');
     expect(config.bot.groupId).toBe('12345@g.us');
+    expect(config.bot.ownerJid).toBe('owner123@s.whatsapp.net');
     expect(config.logging.level).toBe('debug');
   });
 
@@ -26,12 +27,13 @@ describe('loadConfig', () => {
     delete process.env.SESSION_PATH;
     delete process.env.DATABASE_PATH;
     delete process.env.LOG_LEVEL;
+    delete process.env.OWNER_WHATSAPP_ID;
     process.env.GROUP_ID = '12345@g.us';
-    process.env.OWNER_WHATSAPP_ID = 'owner123@s.whatsapp.net';
 
     const config = loadConfig();
     expect(config.whatsapp.sessionPath).toBe('./.baileys_auth');
     expect(config.database.path).toBe('./qa-bot.db');
+    expect(config.bot.ownerJid).toBe('');
     expect(config.logging.level).toBe('info');
   });
 

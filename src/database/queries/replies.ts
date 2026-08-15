@@ -37,6 +37,20 @@ export function createReply(data: ReplyInsert): Result<Reply, Error> {
   }
 }
 
+export function updateReplyGroupMessageId(
+  id: number,
+  groupMessageId: string,
+): Result<Reply, Error> {
+  try {
+    const db = getDatabase();
+    db.prepare(`UPDATE replies SET group_message_id = ? WHERE id = ?`).run(groupMessageId, id);
+    return getReplyById(id);
+  } catch (error) {
+    logger.db.error('Failed to update reply group message id', error);
+    return err(error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
 export function getReplyById(id: number): Result<Reply, Error> {
   try {
     const db = getDatabase();
