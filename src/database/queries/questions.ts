@@ -202,6 +202,13 @@ export function deleteUserData(authorWhatsappId: string): Result<void, Error> {
     `,
     ).run(authorWhatsappId);
 
+    // Delete pending questions
+    db.prepare(
+      `
+      DELETE FROM pending_questions WHERE asker_whatsapp_id = ?
+    `,
+    ).run(authorWhatsappId);
+
     // Delete user row (counter is in question_counters, unaffected)
     db.prepare(
       `

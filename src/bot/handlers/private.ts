@@ -93,6 +93,11 @@ export async function handlePrivateMessage(
   // Handle /exit with optional message
   const exitMatch = trimmed.match(/^\/exit\s*(.*)/is);
   if (exitMatch) {
+    if (!isSessionActive(authorId)) {
+      await sock.sendMessage(authorId, { text: 'You do not have an active session.' });
+      return;
+    }
+
     const exitMessage = exitMatch[1]?.trim();
 
     // Post exit message to group if provided
@@ -240,6 +245,11 @@ export async function handlePrivateMessage(
     return;
   }
 
+  if (isOwnerJid(sock, config, senderJid)) {
+    logger.bot.debug('Ignoring /q command from owner');
+    return;
+  }
+
   // Check if user already has active session
   if (isSessionActive(authorId)) {
     await sock.sendMessage(authorId, { text: MESSAGES.SESSION_ACTIVE });
@@ -262,9 +272,10 @@ export async function handlePrivateMessage(
     }
 
     // Send preview to owner and capture the preview message ID
+    const senderName = message.pushName || authorId.split('@')[0];
     const ownerJid = getOwnerJid(sock, config);
     const previewMsg = await sock.sendMessage(ownerJid, {
-      text: MESSAGES.PENDING_QUESTION_PREVIEW(authorId, questionText),
+      text: MESSAGES.PENDING_QUESTION_PREVIEW(senderName, questionText),
     });
     const previewMsgId = previewMsg?.key?.id ?? '';
 
