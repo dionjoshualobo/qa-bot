@@ -18,7 +18,7 @@ import { updateReplyGroupMessageId } from '../../database/queries/replies.js';
 import { createMapping } from '../../database/queries/mappings.js';
 import { getNextQuestionNumber } from '../../database/queries/questions.js';
 import { startSession, endSession, isSessionActive } from '../sessions.js';
-import { getOwnerJid, getOwnerJids, isOwnerJid } from '../identity.js';
+import { getOwnerJid, isOwnerJid } from '../identity.js';
 import { logger } from '../../utils/logger.js';
 import { MESSAGES } from '../../constants/messages.js';
 import type { Config } from '../../types/index.js';
@@ -74,6 +74,7 @@ export async function handlePrivateMessage(
   text: string,
   config: Config,
 ): Promise<void> {
+  const senderJid = message.key.fromMe ? getOwnerJid(sock, config) : message.key.remoteJid!;
   const authorId = message.key.remoteJid!;
   const trimmed = text.trim();
 
@@ -126,44 +127,38 @@ export async function handlePrivateMessage(
     return false;
   };
 
+  const isApprovalText = (t: string) => {
+    const lower = t.trim().toLowerCase();
+    return (
+      lower === 'approve' ||
+      lower === 'reject' ||
+      lower.startsWith('approve ') ||
+      lower.startsWith('reject ')
+    );
+  };
+
+  // Approval flow for owner
+  if (isOwnerJid(sock, config, senderJid) && isApprovalText(trimmed)) {
+    logger.bot.debug(`Processing approval command from owner: ${senderJid}`);
+    if (quotedMsgId) {
+      const pendingResult = getPendingByPreview(quotedMsgId);
+      if (pendingResult.success && pendingResult.data?.status === 'pending') {
+        if (await checkApprovalCommand(pendingResult.data)) {
+          return;
+        }
+      }
+    }
+
+    // Fallback to latest pending question if quoted message ID lookup failed or unquoted
+    const latestResult = getLatestPending();
+    if (latestResult.success && latestResult.data && latestResult.data.status === 'pending') {
+      if (await checkApprovalCommand(latestResult.data)) {
+        return;
+      }
+    }
+  }
+
   if (quotedMsgId) {
-    // Check if this is an approval/rejection reply to a pending question preview
-    logger.bot.debug(`Checking pending for quotedMsgId: ${quotedMsgId}`);
-    const pendingResult = getPendingByPreview(quotedMsgId);
-    if (!pendingResult.success) {
-      logger.bot.error('Failed to check pending question', pendingResult.error);
-    }
-    if (pendingResult.success) {
-      logger.bot.debug(
-        `Pending result: found=${!!pendingResult.data}, status=${pendingResult.data?.status}`,
-      );
-    }
-    if (pendingResult.success && pendingResult.data?.status === 'pending') {
-      const pending = pendingResult.data;
-
-      // Only owner can approve/reject
-      logger.bot.debug(
-        `Approval check: author=${authorId}, owner=${getOwnerJids(sock, config).join(', ')}`,
-      );
-      if (!isOwnerJid(sock, config, authorId)) {
-        logger.bot.debug('Non-owner attempted approval on pending question');
-        return;
-      }
-
-      logger.bot.debug(
-        `Pending question found: id=${pending.id}, previewMsgId=${pending.preview_message_id}`,
-      );
-
-      if (await checkApprovalCommand(pending)) {
-        return;
-      }
-
-      // Invalid response - notify owner
-      await sock.sendMessage(authorId, {
-        text: MESSAGES.INVALID_APPROVAL_RESPONSE,
-      });
-      return;
-    }
     // This is a reply to something - check if we forwarded it
     const mappingResult = await resolveMessageMapping(quotedMsgId);
 
@@ -241,23 +236,6 @@ export async function handlePrivateMessage(
   // Not a reply to forwarded message or not approve/reject — check for /q or /question command
   const match = trimmed.match(/^\/(?:q|question)\s+(.*)/is);
   if (!match || !match[1]) {
-    // Owner can approve latest pending without quoting (fallback if msg id lookup fails)
-    if (isOwnerJid(sock, config, authorId) && quotedMsgId === undefined) {
-      const trimmedLower = text.trim().toLowerCase();
-      if (
-        trimmedLower === 'approve' ||
-        trimmedLower === 'reject' ||
-        trimmedLower.startsWith('approve ') ||
-        trimmedLower.startsWith('reject ')
-      ) {
-        const latestResult = getLatestPending();
-        if (latestResult.success && latestResult.data) {
-          if (await checkApprovalCommand(latestResult.data)) {
-            return;
-          }
-        }
-      }
-    }
     logger.bot.debug('Ignoring non-command message');
     return;
   }

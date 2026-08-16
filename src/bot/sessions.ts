@@ -1,11 +1,20 @@
-/**
- * Session management - tracks which users have active Q&A sessions
- */
+import { getDatabase } from '../database/database.js';
 
 const activeSessions = new Set<string>();
 
 export function isSessionActive(jid: string): boolean {
-  return activeSessions.has(jid);
+  if (activeSessions.has(jid)) {
+    return true;
+  }
+  try {
+    const db = getDatabase();
+    const row = db.prepare('SELECT 1 FROM questions WHERE author_whatsapp_id = ? LIMIT 1').get(jid);
+    if (row) {
+      activeSessions.add(jid);
+      return true;
+    }
+  } catch {}
+  return false;
 }
 
 export function startSession(jid: string): void {

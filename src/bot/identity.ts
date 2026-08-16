@@ -47,8 +47,9 @@ export function isOwnerJid(
  * is not set.
  */
 export function getOwnerJid(sock: WASocket, config: Config): string {
-  if (config.bot.ownerJid) return config.bot.ownerJid;
   const me = sock.user;
+  if (me?.lid) return jidNormalizedUser(me.lid);
   if (me?.id) return jidNormalizedUser(me.id);
+  if (config.bot.ownerJid) return config.bot.ownerJid;
   return '';
 }

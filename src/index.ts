@@ -29,8 +29,9 @@ async function main(): Promise<void> {
     }
     logger.bot.info('Database initialized');
 
-    const sock = await startClient(config.whatsapp.sessionPath);
-    registerEventHandlers(sock, config);
+    await startClient(config.whatsapp.sessionPath, config.logging.level, (newSock) =>
+      registerEventHandlers(newSock, config),
+    );
 
     logger.bot.info('QA Bot is running');
   } catch (error) {
